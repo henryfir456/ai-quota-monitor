@@ -24,15 +24,15 @@ Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <p
 
 ## Issue #11 / v0.1.2 額度來源修正
 
-本 PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917` 已於 Windows Server 2025 與 Ubuntu GitHub-hosted runners 完成可重現驗證：[Actions run 39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848)。Windows job restore/build、123/123 xUnit、Claude helper 合成輸入及 PowerShell script parse、dependency audit、最終 packaged EXE smoke、故意啟動失敗反向測試和同一 EXE/ZIP SHA-256 檢查均通過；Ubuntu governance/Gitleaks 通過。
+PR head `dcd15329bbb83393d496ec3096276cd6e649c0c2` 已於 Windows Server 2025 與 Ubuntu GitHub-hosted runners 完成可重現驗證：[Actions run 39573823707](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39573823707)。Windows job restore/build、123/123 xUnit、Claude helper 合成輸入及 PowerShell script parse、dependency audit、最終 packaged EXE smoke、故意啟動失敗反向測試和同一 EXE/ZIP SHA-256 檢查均通過；Ubuntu governance/Gitleaks 通過。
 
 | 最終 Windows 產物 Gate | 結果 | 安全證據 |
 | --- | --- | --- |
 | 最終 EXE GUI 啟動與 ready 狀態 | PASS | Main window/UI ready、offline/no-account/no-token 隔離啟動；程序至少存活 5 秒；無匹配未處理崩潰事件 |
 | 故意失敗反向測試 | PASS | 注入 `XamlParseException` 後未寫 UI ready；Gate 判定失敗啟動 |
 | xUnit / PowerShell helper | PASS | Windows xUnit 123/123；helper 測試僅使用合成 statusline JSON；所有 PowerShell scripts 可解析 |
-| 同一產物 SHA-256 | PASS | standalone EXE `22f8a4b515f7562c3ef40158eecef12c3d33da5c606aaf26f9e45ff47617aaa9`；portable ZIP `cb501e319332b5602aa544a60df534fba040334624f1619867aa92aaf40a5ff2` |
-| Runner evidence artifact | 已上傳 | `windows-packaged-smoke-evidence`，artifact ID `12333085408`；不含帳號、Token、真實配額或供應商原始回應 |
+| 同一產物 SHA-256 | PASS | standalone EXE `8d4ec404a422ac2961c48867469c04a55522024b175793d802b21b1a58083907`；portable ZIP `619d65c42458e55bf6cceedf8e254042b91f4f599662247c67a13c3ae37e8761` |
+| Runner evidence artifact | 已上傳 | `windows-packaged-smoke-evidence`，artifact ID `12334145341`；不含帳號、Token、真實配額或供應商原始回應 |
 
 - 真實供應商資料：`NOT VERIFIED`。未在此環境啟動真實 Claude Code/Codex 帳號、登入、讀取 Token 或執行推論；合成百分比不是實際額度。
 - Windows 11 實機 UAT：`HUMAN_TEST_PENDING`。上述 runner 是 Windows Server 2025，不能代替 Windows 11 裝置；請按 `docs/UAT_WINDOWS11.md` 驗證真實 statusline 輸入與 Codex Desktop/CLI 版本，公開紀錄不得包含帳號或額度原始資料。

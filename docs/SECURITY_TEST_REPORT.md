@@ -4,7 +4,7 @@
 
 | Gate | 命令／方法 | 狀態 | 證據 |
 | --- | --- | --- | --- |
-| Release publish token isolation | Build/package and smoke jobs use `contents:read`; isolated artifact-only publisher gets `contents:write`; checkout credential persistence disabled; only v0.1.1 tag already contained in main may proceed | Workflow policy implemented; new Release workflow NOT RUN | `.github/workflows/release.yml`; verify through release run |
+| Release publish token isolation | Build/package and smoke jobs use `contents:read`; isolated artifact-only publisher gets `contents:write`; checkout credential persistence disabled; only fixed v0.1.2 manual dispatch from main may proceed | Workflow policy implemented; v0.1.2 Release workflow NOT RUN | `.github/workflows/release.yml`; verify through release run |
 | Windows final-package startup gate | Offline smoke mode launches exact packaged EXE on `windows-latest`; checks UI ready signal, main window, stability, exception/events, negative startup failure, and unchanged EXE/ZIP SHA-256 | PASS on code candidate SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9`; Release/tag publish NOT RUN | Actions run [39554220174](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39554220174); standalone EXE SHA `ccce850276056beaeecd0479ec28633bd741ca64b5faaebb615f94be7eeb425e`, portable ZIP SHA `a7805935bf50c108612c18ca8b4247610298a7336711c03833b53bf8b709a851` |
 | Repository policy regression | Ubuntu · `node --test tests/*.test.cjs` | PASS · 32/32 | run 39554220174 governance job |
 | Secret scan | Gitleaks action pinned commit; full history | PASS | run 39554220174 governance job; initial Windows installer 404 was fixed by moving scan to Ubuntu |
@@ -20,7 +20,7 @@ Monitor 不讀取 Codex 或 Claude credential 檔、不自動登入、不安裝�
 
 ## Issue #11 v0.1.2 安全驗證狀態
 
-以下驗證適用於完整 PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917`，由 [Actions run 39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848) 的 Windows Server 2025 與 Ubuntu GitHub-hosted runners 執行。Windows 11 UAT 與真實供應商帳號驗證仍分別 pending/not verified；合成 fixture 不代表真實額度。
+以下驗證適用於完整 PR head `dcd15329bbb83393d496ec3096276cd6e649c0c2`，由 [Actions run 39573823707](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39573823707) 的 Windows Server 2025 與 Ubuntu GitHub-hosted runners 執行。Windows 11 UAT 與真實供應商帳號驗證仍分別 pending/not verified；合成 fixture 不代表真實額度。
 
 | 檢查 | 風險控制 | 狀態 |
 | --- | --- | --- |

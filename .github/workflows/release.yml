@@ -1,11 +1,6 @@
 name: Windows portable prerelease
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj
   workflow_dispatch:
     inputs:
       release_tag:
@@ -41,24 +36,17 @@ jobs:
           DISPATCH_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           $expectedTag = 'v0.1.2'
-          if ($env:GITHUB_REF_NAME -ne 'main') { throw 'Prerelease must run from main.' }
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
-          }
-          elseif ($env:GITHUB_EVENT_NAME -eq 'push') {
-            $event = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
-            if ($event.before -notmatch '^[0-9a-f]{40}$') { throw 'Version-bump release requires a complete prior main SHA.' }
-            $previousProjectText = git show "$($event.before):src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj"
-            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the prior application version.' }
-            [xml]$previousProject = $previousProjectText -join "`n"
-            if ($previousProject.Project.PropertyGroup.Version -ne '0.1.1') { throw 'Automatic prerelease requires a direct 0.1.1 to 0.1.2 version change.' }
-            $changedPaths = @(git diff --name-only $event.before $env:GITHUB_SHA)
-            if ($LASTEXITCODE -ne 0 -or $changedPaths -notcontains 'src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj') { throw 'Automatic prerelease requires the application version project file to change.' }
-          }
-          else { throw 'Only main version-bump pushes or reviewed manual dispatches may publish this prerelease.' }
-          $existingTag = git ls-remote --tags origin "refs/tags/$expectedTag" "refs/tags/$expectedTag^{}"
+          if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch' -or $env:GITHUB_REF_NAME -ne 'main') { throw 'Prerelease requires a manual dispatch from main.' }
+          if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
+          $existingTag = @(git ls-remote --tags origin "refs/tags/$expectedTag" "refs/tags/$expectedTag^{}")
           if ($LASTEXITCODE -ne 0) { throw 'Could not check whether the v0.1.2 tag already exists.' }
-          if ($existingTag) { throw 'Manual prerelease dispatch refuses to replace an existing tag.' }
+          if ($existingTag.Count -gt 0) {
+            $records = @($existingTag | ForEach-Object { $parts = $_ -split '\s+'; [pscustomobject]@{ Sha = $parts[0]; Ref = $parts[1] } })
+            $resolvedTagSha = [string](($records | Where-Object Ref -eq "refs/tags/$expectedTag^{}" | Select-Object -First 1).Sha)
+            if (-not $resolvedTagSha) { $resolvedTagSha = [string](($records | Where-Object Ref -eq "refs/tags/$expectedTag" | Select-Object -First 1).Sha) }
+            if ($resolvedTagSha -ne $env:GITHUB_SHA) { throw 'Existing v0.1.2 tag points to another source SHA; refusing reuse.' }
+            Write-Output 'Existing v0.1.2 tag matches this exact source SHA and may resume an interrupted release.'
+          }
           $tagCommit = (git rev-parse HEAD).Trim()
           if ($tagCommit -ne $env:GITHUB_SHA) { throw 'Checked out source SHA differs from release tag SHA.' }
           $mainCommit = (git rev-parse refs/remotes/origin/main).Trim()
@@ -253,18 +241,60 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ ("$GITHUB_EVENT_NAME" != "workflow_dispatch" && "$GITHUB_EVENT_NAME" != "push") || "$GITHUB_REF_NAME" != "main" || "$RELEASE_TAG" != "v0.1.2" ]]; then
-            echo 'Release must be v0.1.2 from a guarded main event.' >&2
+          if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" || "$GITHUB_REF_NAME" != "main" || "$RELEASE_TAG" != "v0.1.2" ]]; then
+            echo 'Release must be v0.1.2 from a manual dispatch on main.' >&2
             exit 1
           fi
-          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo 'Refusing to replace an existing v0.1.2 tag.' >&2
+          api_base="${GITHUB_API_URL:-https://api.github.com}/repos/$GITHUB_REPOSITORY"
+          auth_header="Authorization: Bearer $GH_TOKEN"
+          tag_status="$(curl --silent --show-error --output "$RUNNER_TEMP/release-tag.json" --write-out '%{http_code}' \
+            --header "$auth_header" --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' "$api_base/git/ref/tags/$RELEASE_TAG")"
+          resolve_tag_commit() {
+            local response object_type object_sha attempt
+            response="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG")"
+            object_type="$(jq -r '.object.type' <<< "$response")"
+            object_sha="$(jq -r '.object.sha' <<< "$response")"
+            for attempt in 1 2 3 4 5; do
+              if [[ "$object_type" == "commit" ]]; then
+                printf '%s' "$object_sha"
+                return 0
+              fi
+              if [[ "$object_type" != "tag" ]]; then return 1; fi
+              response="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$object_sha")"
+              object_type="$(jq -r '.object.type' <<< "$response")"
+              object_sha="$(jq -r '.object.sha' <<< "$response")"
+            done
+            return 1
+          }
+          tag_present=false
+          case "$tag_status" in
+            404) ;;
+            200)
+              tag_present=true
+              existing_tag_sha="$(resolve_tag_commit)" || { echo 'Could not resolve the existing release tag.' >&2; exit 1; }
+              if [[ "$existing_tag_sha" != "$EXPECTED_SHA" ]]; then
+                echo 'Existing v0.1.2 tag points to another source SHA.' >&2
+                exit 1
+              fi
+              echo 'Existing v0.1.2 tag matches the exact tested source SHA; continuing an interrupted release.'
+              ;;
+            *) echo "Could not establish whether v0.1.2 tag exists (HTTP $tag_status)." >&2; exit 1 ;;
+          esac
+          release_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "$auth_header" --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' "$api_base/releases/tags/$RELEASE_TAG")"
+          if [[ "$release_status" != "404" ]]; then
+            if [[ "$release_status" == "200" ]]; then echo 'A v0.1.2 release already exists; refusing to replace it.' >&2
+            else echo "Could not establish that no v0.1.2 release exists (HTTP $release_status)." >&2; fi
             exit 1
           fi
-          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-            -f "ref=refs/tags/$RELEASE_TAG" \
-            -f "sha=$EXPECTED_SHA" >/dev/null
-          actual_tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')"
+          if [[ "$tag_present" == false ]]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/tags/$RELEASE_TAG" \
+              -f "sha=$EXPECTED_SHA" >/dev/null
+          fi
+          actual_tag_sha="$(resolve_tag_commit)"
           if [[ "$actual_tag_sha" != "$EXPECTED_SHA" ]]; then
             echo 'Release tag does not point to the exact Windows-tested source commit.' >&2
             exit 1

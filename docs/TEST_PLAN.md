@@ -29,7 +29,7 @@ Issue #9 / PR #10 新增 Gate 已在程式來源 SHA `61b64cef0f58ec16064e321369
 
 ## Issue #11 v0.1.2 本輪測試
 
-下列測試使用官方 protocol 形狀和合成回應；PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917` 的 Windows/Ubuntu Actions run [39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848) 全部通過。它們不證明真實帳號成功取得額度。
+下列測試使用官方 protocol 形狀和合成回應；PR head `dcd15329bbb83393d496ec3096276cd6e649c0c2` 的 Windows/Ubuntu Actions run [39573823707](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39573823707) 全部通過。它們不證明真實帳號成功取得額度。
 
 | Provider / 狀態 | 測試方式 | 預期 | 狀態 |
 | --- | --- | --- | --- |
@@ -42,5 +42,5 @@ Issue #9 / PR #10 新增 Gate 已在程式來源 SHA `61b64cef0f58ec16064e321369
 | Codex uninstalled / not logged in | locator no-match 與 `account:null` 合成 RPC | 顯示未安裝／未登入並提供建議；不嘗試登入或額度推測 | PASS · Windows xUnit |
 | Codex parse failure / timeout / unsupported | malformed response、provider timeout、RPC -32601、未知窗口 schema | 各自顯示明確狀態；百分比保持 N/A | PASS · Windows xUnit |
 | Refresh timestamp and UI state | success 後接失敗快照並監聽 ViewModel property change | 失敗不保留舊百分比；最後成功時間保留且診斷即時更新 | PASS · Windows xUnit |
-| Final v0.1.2 packaged EXE | Windows final package GUI smoke、reverse control 與 SHA identity | offline/no-account/no-token 啟動 PASS；失敗或 UNKNOWN 阻止 Release | PASS · Windows Server 2025; EXE `22f8a4b515f7562c3ef40158eecef12c3d33da5c606aaf26f9e45ff47617aaa9`; ZIP `cb501e319332b5602aa544a60df534fba040334624f1619867aa92aaf40a5ff2` |
+| Final v0.1.2 packaged EXE | Windows final package GUI smoke、reverse control 與 SHA identity | offline/no-account/no-token 啟動 PASS；失敗或 UNKNOWN 阻止 Release | PASS · Windows Server 2025; EXE `8d4ec404a422ac2961c48867469c04a55522024b175793d802b21b1a58083907`; ZIP `619d65c42458e55bf6cceedf8e254042b91f4f599662247c67a13c3ae37e8761` |
 | Real provider accounts | Windows 11 真實 Claude Code/Codex 版本與登入狀態 | 只有實際來源回報欄位後才能記錄額度讀取成功 | HUMAN_TEST_PENDING |

@@ -21,7 +21,7 @@
 - 增加已登入／未登入、成功、未設定／未安裝、解析失敗、逾時與過期的合成協定測試；真實供應商帳號驗證需 Windows 11 UAT。
 
 ### 發行
-- Windows x64 Release workflow 增加受限 `workflow_dispatch` 入口，仍依 build → package → smoke test → SHA-256 驗證 → Release 順序執行並沿用同一成品。
+- Windows x64 Release workflow 僅接受 main 上固定 `v0.1.2` 的 `workflow_dispatch`，依 build → package → smoke test → SHA-256 驗證 → Release 順序執行並沿用同一成品；中斷後只有來源 SHA 相同且尚無 Release 的既有 tag 可續跑。
 
 ## [0.1.1] - 2026-10-21
 
