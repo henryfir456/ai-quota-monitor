@@ -1,0 +1,26 @@
+name: 功能需求
+description: 先確定真實目標與驗收條件
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 真實目標與使用情境
+      description: 想解決什麼問題，而不只是要增加什麼按鈕？
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 成功條件／驗收方式
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: 範圍、明確不做的事及風險
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 相關截圖、日誌、文件或前置 Issue

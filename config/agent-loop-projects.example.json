@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "controller": {
+    "state_path": ".adl-state/controller.sqlite",
+    "scheduler": { "enabled": false, "interval_seconds": 300 },
+    "dispatcher": { "enabled": false },
+    "limits": {
+      "max_parallel_jobs": 2,
+      "max_parallel_per_repo": 1,
+      "daily_dispatch_budget": 0,
+      "max_issue_pages_per_repo": 20
+    }
+  },
+  "projects": [
+    {
+      "repo": "henryfir456/agent-development-loop",
+      "enabled": true,
+      "capabilities": {
+        "scan": true,
+        "issue_claim": false,
+        "issue_write": false,
+        "develop": false,
+        "review": false,
+        "merge": false,
+        "close_issue": false,
+        "deploy": false
+      },
+      "limits": { "max_parallel_jobs": 1, "daily_dispatch_budget": 0 },
+      "runtime": { "name": "node", "minimum_version": "22.13.0" },
+      "dependencies": [],
+      "test_commands": ["node --test tests/*.test.mjs"]
+    },
+    {
+      "repo": "henryfir456/DailyCheckIn_Android",
+      "enabled": true,
+      "capabilities": {
+        "scan": true,
+        "issue_claim": false,
+        "issue_write": false,
+        "develop": false,
+        "review": false,
+        "merge": false,
+        "close_issue": false,
+        "deploy": false
+      },
+      "limits": { "max_parallel_jobs": 1, "daily_dispatch_budget": 0 },
+      "runtime": { "name": "java", "minimum_version": "17.0.0" },
+      "dependencies": [],
+      "test_commands": ["./gradlew test"]
+    },
+    {
+      "repo": "henryfir456/bento-order-app",
+      "enabled": true,
+      "capabilities": {
+        "scan": true,
+        "issue_claim": false,
+        "issue_write": false,
+        "develop": false,
+        "review": false,
+        "merge": false,
+        "close_issue": false,
+        "deploy": false
+      },
+      "limits": { "max_parallel_jobs": 1, "daily_dispatch_budget": 0 },
+      "runtime": { "name": "node", "minimum_version": "22.13.0" },
+      "dependencies": [],
+      "test_commands": ["npm test"]
+    }
+  ]
+}

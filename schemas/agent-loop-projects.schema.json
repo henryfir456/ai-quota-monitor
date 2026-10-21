@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://henryfir456.github.io/agent-project-template/schemas/agent-loop-projects.schema.json",
+  "title": "Agent Loop Project Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "controller", "projects"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "controller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state_path", "scheduler", "dispatcher", "limits"],
+      "properties": {
+        "state_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!\\\\)(?!.*(?:^|[/\\\\])\\.\\.(?:[/\\\\]|$))(?!.*\\u0000).+$"
+        },
+        "scheduler": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "interval_seconds"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "interval_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 }
+          }
+        },
+        "dispatcher": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": { "enabled": { "type": "boolean" } }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_parallel_jobs", "max_parallel_per_repo", "daily_dispatch_budget", "max_issue_pages_per_repo"],
+          "properties": {
+            "max_parallel_jobs": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "max_parallel_per_repo": { "type": "integer", "minimum": 1, "maximum": 10 },
+            "daily_dispatch_budget": { "type": "integer", "minimum": 0, "maximum": 100000 },
+            "max_issue_pages_per_repo": { "type": "integer", "minimum": 1, "maximum": 20 }
+          }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repo", "enabled", "capabilities", "limits", "runtime", "dependencies", "test_commands"],
+        "properties": {
+          "repo": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+          "enabled": { "type": "boolean" },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["scan", "issue_claim", "issue_write", "develop", "review", "merge", "close_issue", "deploy"],
+            "properties": {
+              "scan": { "type": "boolean" },
+              "issue_claim": { "type": "boolean" },
+              "issue_write": { "type": "boolean" },
+              "develop": { "type": "boolean" },
+              "review": { "type": "boolean" },
+              "merge": { "type": "boolean" },
+              "close_issue": { "type": "boolean" },
+              "deploy": { "type": "boolean" }
+            }
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["max_parallel_jobs", "daily_dispatch_budget"],
+            "properties": {
+              "max_parallel_jobs": { "type": "integer", "minimum": 1, "maximum": 10 },
+              "daily_dispatch_budget": { "type": "integer", "minimum": 0, "maximum": 100000 }
+            }
+          },
+          "runtime": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "minimum_version"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "minimum_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$" }
+            }
+          },
+          "dependencies": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "test_commands": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

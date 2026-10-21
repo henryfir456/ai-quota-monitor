@@ -1,0 +1,16 @@
+# Local secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Local build outputs
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+.worktrees/
+.superpowers/

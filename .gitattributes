@@ -1,0 +1,7 @@
+# Git 使用一致的 checkout 換行，腳本 BOM 另由 EditorConfig 與 CI 驗證。
+* text=auto
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=lf
+*.psm1 text eol=lf
+*.psd1 text eol=lf

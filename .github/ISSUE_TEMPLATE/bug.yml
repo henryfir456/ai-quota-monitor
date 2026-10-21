@@ -1,0 +1,25 @@
+name: Bug 回報
+description: 保留可重現與驗證證據
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 實際行為與預期行為
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 重現步驟、環境、版本
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 日誌、畫面、相關 SHA 或測試
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: 可能的風險及不可變更範圍
