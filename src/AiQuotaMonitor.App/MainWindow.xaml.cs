@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using AiQuotaMonitor.App.Services;
 using AiQuotaMonitor.App.ViewModels;
+using MessageBox = System.Windows.MessageBox;
 
 namespace AiQuotaMonitor.App;
 

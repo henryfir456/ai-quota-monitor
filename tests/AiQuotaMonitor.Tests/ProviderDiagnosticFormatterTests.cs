@@ -6,16 +6,16 @@ namespace AiQuotaMonitor.Tests;
 public sealed class ProviderDiagnosticFormatterTests
 {
     [Theory]
-    [InlineData(ProviderId.Claude, "statusline_not_configured", "尚未設定 Claude Code statusline")]
+    [InlineData(ProviderId.Claude, "statusline_not_configured", "尚未設定 Claude Code 官方 statusline")]
     [InlineData(ProviderId.Claude, "claude_cli_not_found", "找不到 Claude Code CLI")]
-    [InlineData(ProviderId.Claude, "statusline_rate_limits_missing", "Claude Code 未回報額度欄位")]
+    [InlineData(ProviderId.Claude, "statusline_rate_limits_missing", "Claude Code 未回報 rate_limits 額度欄位")]
     [InlineData(ProviderId.Claude, "timeout", "statusline 已設定，但 15 分鐘內沒有收到資料")]
     [InlineData(ProviderId.Claude, "helper_unavailable", "Claude statusline 指向的 Monitor helper 不存在")]
     [InlineData(ProviderId.Claude, "parse_failure", "額度資料解析失敗")]
     [InlineData(ProviderId.Codex, "codex_cli_not_found", "找不到 Codex CLI")]
-    [InlineData(ProviderId.Codex, "codex_not_logged_in", "Codex 尚未登入")]
+    [InlineData(ProviderId.Codex, "codex_not_logged_in", "Codex 回報目前沒有已登入的帳號")]
     [InlineData(ProviderId.Codex, "timeout", "Codex App Server 查詢逾時")]
-    [InlineData(ProviderId.Codex, "rpc_method_not_supported", "目前 Codex 版本不支援額度方法")]
+    [InlineData(ProviderId.Codex, "rpc_method_not_supported", "目前 Codex App Server 不支援 account/rateLimits/read")]
     public void DescribesConcreteProviderCauseAndNextAction(ProviderId providerId, string errorCode, string expectedReason)
     {
         var observation = new QuotaObservation(

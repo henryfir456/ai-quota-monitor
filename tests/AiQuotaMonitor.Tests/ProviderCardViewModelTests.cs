@@ -32,7 +32,7 @@ public sealed class ProviderCardViewModelTests
         card.Apply(failed, showUsedPercent: false);
 
         Assert.True(diagnosticChanged);
-        Assert.Contains("Codex 尚未登入", card.DiagnosticText, StringComparison.Ordinal);
+        Assert.Contains("Codex 回報目前沒有已登入的帳號", card.DiagnosticText, StringComparison.Ordinal);
         Assert.Contains("codex_not_logged_in", card.DiagnosticText, StringComparison.Ordinal);
         Assert.Equal("最後成功：2026/10/21 08:00:00 Asia/Taipei", card.LastSuccessfulUpdateText);
         Assert.Equal("尚未登入", card.StatusText);
