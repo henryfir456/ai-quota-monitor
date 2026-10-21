@@ -230,6 +230,27 @@ public sealed class ClaudeStatuslineSetupServiceTests : IDisposable
     }
 
     [Fact]
+    public void ConcurrentSettingsEditAfterJournalWriteIsPreservedAndSetupAborts()
+    {
+        var settingsDirectory = Path.Combine(_userProfile, ".claude");
+        Directory.CreateDirectory(settingsDirectory);
+        var settingsPath = Path.Combine(settingsDirectory, "settings.json");
+        var journalPath = Path.Combine(_localAppData, "AiQuotaMonitor", "claude-statusline-setup.json");
+        File.WriteAllText(settingsPath, "{\"theme\":\"dark\"}");
+        const string concurrentSettings = "{\"theme\":\"light\",\"updatedByOtherProcess\":true}";
+        var service = CreateService(claudeInstalled: true,
+            afterJournalWritten: () => File.WriteAllText(settingsPath, concurrentSettings));
+
+        var result = service.Configure();
+
+        Assert.Equal("settings_changed_during_setup", result.ResultCode);
+        Assert.Equal(concurrentSettings, File.ReadAllText(settingsPath));
+        Assert.False(File.Exists(journalPath));
+        Assert.False(File.Exists(Path.Combine(_localAppData, "AiQuotaMonitor", "claude-statusline.ps1")));
+        Assert.Single(Directory.GetFiles(settingsDirectory, "settings.json.aiquota-*.bak"));
+    }
+
+    [Fact]
     public void RollbackRefusesToOverwriteAStatuslineChangedByTheUser()
     {
         var service = CreateService();
@@ -285,7 +306,7 @@ public sealed class ClaudeStatuslineSetupServiceTests : IDisposable
         Assert.Null(restored["statusLine"]);
     }
 
-    private ClaudeStatuslineSetupService CreateService(bool claudeInstalled = false) => new(
+    private ClaudeStatuslineSetupService CreateService(bool claudeInstalled = false, Action? afterJournalWritten = null) => new(
         userProfile: _userProfile,
         localAppData: _localAppData,
         appData: _appData,
@@ -293,7 +314,8 @@ public sealed class ClaudeStatuslineSetupServiceTests : IDisposable
         helperContent: "# Synthetic helper contents; not a credential.",
         fileExists: path => Path.GetFileName(path).Equals("claude-statusline.ps1", StringComparison.OrdinalIgnoreCase)
             ? File.Exists(path)
-            : claudeInstalled);
+            : claudeInstalled,
+        afterJournalWritten: afterJournalWritten);
 
     private static void RunIcacls(string path, params string[] arguments)
     {

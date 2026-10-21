@@ -26,6 +26,7 @@ public sealed class ClaudeStatuslineSetupService
     private readonly string? _pathVariable;
     private readonly string? _helperContent;
     private readonly Func<string, bool> _fileExists;
+    private readonly Action? _afterJournalWritten;
 
     public ClaudeStatuslineSetupService(
         string? userProfile = null,
@@ -33,7 +34,8 @@ public sealed class ClaudeStatuslineSetupService
         string? appData = null,
         string? pathVariable = null,
         string? helperContent = null,
-        Func<string, bool>? fileExists = null)
+        Func<string, bool>? fileExists = null,
+        Action? afterJournalWritten = null)
     {
         _userProfile = userProfile ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         _localApplicationData = localAppData ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -42,6 +44,7 @@ public sealed class ClaudeStatuslineSetupService
         _pathVariable = pathVariable ?? Environment.GetEnvironmentVariable("PATH");
         _helperContent = helperContent ?? ReadEmbeddedHelper();
         _fileExists = fileExists ?? File.Exists;
+        _afterJournalWritten = afterJournalWritten;
     }
 
     public string SettingsPath => Path.Combine(_userProfile, ".claude", "settings.json");
@@ -241,9 +244,13 @@ public sealed class ClaudeStatuslineSetupService
             journalBytes = JsonSerializer.SerializeToUtf8Bytes(journal, JsonOptions);
             WriteAtomicNew(JournalPath, journalBytes);
             journalWritten = true;
+            _afterJournalWritten?.Invoke();
 
             if (settingsExisted)
             {
+                // Recheck after the durable recovery journal write because another
+                // process may have edited settings.json while setup state was saved.
+                EnsureUnchanged(SettingsPath, originalBytes!);
                 WriteAtomic(SettingsPath, updatedSettings);
             }
             else
@@ -254,6 +261,20 @@ public sealed class ClaudeStatuslineSetupService
             return new("configured", settingsExisted
                 ? "Claude Code 官方 statusline 已設定，原 settings.json 已建立本機備份。只有 Claude Code 提供 rate_limits 欄位時才會顯示額度；可用同一按鈕復原設定。"
                 : "Claude Code 官方 statusline 已設定。沒有既有設定需要備份；只有 Claude Code 提供 rate_limits 欄位時才會顯示額度。可用同一按鈕復原設定。");
+        }
+        catch (SettingsChangedException)
+        {
+            if (helperCreated)
+            {
+                DeleteIfMatches(helperPath, helperBytes);
+            }
+
+            if (journalWritten && journalBytes is not null)
+            {
+                DeleteIfMatches(JournalPath, journalBytes);
+            }
+
+            return new("settings_changed_during_setup", "Claude settings.json 在設定期間被其他程式修改。為保留最新內容，Monitor 未套用 Claude statusLine；請重新檢查後再試。原檔備份仍保留。");
         }
         catch (Exception exception) when (IsFileAccessFailure(exception))
         {
@@ -344,6 +365,10 @@ public sealed class ClaudeStatuslineSetupService
 
             DeleteIfMatches(JournalPath, SerializeJournal(journal));
             return new("restored", "Monitor 加入的 statusLine 已移除；其他設定保留。本機備份檔仍保留，helper 檔也未刪除。");
+        }
+        catch (SettingsChangedException)
+        {
+            return new("settings_changed_since_setup", "Claude settings.json 在復原期間被其他程式修改；為保留最新內容，Monitor 未寫入復原結果。");
         }
         catch (Exception exception) when (IsFileAccessFailure(exception))
         {
@@ -500,8 +525,13 @@ public sealed class ClaudeStatuslineSetupService
     {
         if (!TryReadFileIfPresent(path, out var actual) || !actual.AsSpan().SequenceEqual(expected))
         {
-            throw new IOException("Settings changed during the update.");
+            throw new SettingsChangedException();
         }
+    }
+
+    private sealed class SettingsChangedException : IOException
+    {
+        public SettingsChangedException() : base("Settings changed during the update.") { }
     }
 
     private static bool TryReadFileIfPresent(string path, out byte[] bytes)
