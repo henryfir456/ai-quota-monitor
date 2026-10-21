@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>AiQuotaMonitor.Providers</AssemblyName>
+    <RootNamespace>AiQuotaMonitor.Providers</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AiQuotaMonitor.Core\AiQuotaMonitor.Core.csproj" />
+  </ItemGroup>
+</Project>
