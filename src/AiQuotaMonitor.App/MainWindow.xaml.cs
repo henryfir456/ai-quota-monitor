@@ -181,7 +181,7 @@ public partial class MainWindow : Window
     {
         UpdateLayout();
         var controls = EnumerateVisualChildren(this).ToArray();
-        var progressBars = controls.OfType<ProgressBar>().ToArray();
+        var progressBars = controls.OfType<System.Windows.Controls.ProgressBar>().ToArray();
         var bindingModes = progressBars
             .Select(progressBar => BindingOperations.GetBinding(progressBar, RangeBase.ValueProperty)?.Mode.ToString())
             .ToArray();
