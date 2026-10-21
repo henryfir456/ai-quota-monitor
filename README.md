@@ -2,7 +2,7 @@
 
 Windows 11 x64 桌面程式，以繁體中文顯示 Claude Code 與 OpenAI Codex 可取得的 5 小時及每週額度。只顯示經來源資料證實的百分比與重置時間；缺少或不支援的欄位維持 `UNKNOWN`／`N/A`，不以假資料、本機 token 計數或歷史平均冒充訂閱額度。
 
-> v0.1.0 保留為原始 prerelease。v0.1.1 候選版已在 GitHub Windows Server 2025 runner 完成 packaged EXE UI smoke、故障反向測試與 SHA-256 同一性驗證（[Actions run 39552400463](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39552400463)）；尚未發布，仍須完成獨立 review、Squash Merge 與 merge 後 tag Release Gate。Windows runner 通過不代表 Windows 11 實機 UAT；請依 [UAT 清單](docs/UAT_WINDOWS11.md)確認。
+> v0.1.0 保留為原始 prerelease。v0.1.1 候選修正來源 SHA `8aef7db2a25f637c8df8231b1f29fd540e9881f5` 已在 GitHub Windows Server 2025 runner 完成 packaged EXE UI smoke、故障反向測試與 SHA-256 同一性驗證（[Actions run 39553296900](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39553296900)）。EXE SHA-256 為 `fd03e4d6ee9357e67bc3248a98840b39eee058a2911efd0bd55e538d1021282b`，portable ZIP 為 `c72e1a80fdc4ee0bd2100654eb75b316fb5ef48705548a37471c2918f1540ba9`；尚未發布，仍須完成精確 PR head review、Squash Merge 與 merge 後 tag Release Gate。Windows runner 通過不代表 Windows 11 實機 UAT；請依 [UAT 清單](docs/UAT_WINDOWS11.md)確認。
 
 ## 功能
 
