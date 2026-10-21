@@ -1,5 +1,27 @@
 # 測試報告
 
+## Issue #9 / PR #10 修正驗證狀態
+
+修正程式來源 SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9` 的 Windows Gate 已在 GitHub Actions run [39554220174](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39554220174) 通過。較早候選 `8aef7db2a25f637c8df8231b1f29fd540e9881f5` 的 run 39553296900 已由此精確候選取代。這仍是候選驗證，不是 Release；`v0.1.1` 對外發布須等待精確 PR head 的文件變更 CI、獨立 review、Squash Merge、合併後 tag Release workflow 與同一最終產物驗證。此報告記錄 run 39554220174 實際驗證的程式碼來源 SHA；後續文件-only提交的 Actions 結果以 PR Checks 為準。
+
+### Issue #9 packaged EXE Gate 結果
+
+| 檢查 | 結果 | 證據 |
+| --- | --- | --- |
+| Windows restore / Release build | PASS | GitHub Windows Server 2025 runner；run 39554220174；Source SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9` |
+| XAML regression / xUnit | PASS · 56 passed / 0 failed / 0 skipped | 同一 Windows job；唯讀 ProgressValue XAML regression test 已執行 |
+| PowerShell scripts parse、Claude synthetic helper、NuGet audit | PASS | 同一 Windows job；完整 PowerShell scripts parse，NuGet vulnerability audit 成功 |
+| 最終 portable ZIP 內 standalone EXE smoke | PASS | 最終 package 完成後啟動該 EXE；offline/no-account/no-token 模式跳過 provider/CLI 刷新 |
+| UI ready / 穩定存活 / clean close | PASS | 可見主視窗 `AI 額度監控器`、Claude/Codex 兩卡、四條 OneWay progress binding；外部視窗 handle/title 保持 5 秒，正常關閉 |
+| 異常與崩潰事件 | PASS · 0 個相符事件 | smoke exception marker 與 Windows Application Error 1000 / .NET Runtime 1026 檢查 |
+| 故意啟動失敗反向案例 | PASS | 注入 `System.Windows.Markup.XamlParseException`，程序非零退出且未寫 UI ready marker；相同 Gate 拒絕壞版 |
+| SHA-256 同一性 | PASS | EXE `ccce850276056beaeecd0479ec28633bd741ca64b5faaebb615f94be7eeb425e`；portable ZIP `a7805935bf50c108612c18ca8b4247610298a7336711c03833b53bf8b709a851`；zip 內 EXE 與被測獨立 EXE 相同 |
+| 候選證據 artifact | 已上傳 | Actions run artifact `windows-packaged-smoke-evidence`，ID `12324264835`，artifact digest `sha256:1598a434617bd7ca6efab40f1d6e37655fed518abe32f7392120ba83a12e074b`，保留至 2026-11-04 |
+| Gitleaks / Ubuntu governance | PASS | 同一 PR run；repository-governance job 成功 |
+| Release / Windows 11 實機 UAT | 尚未發布 / HUMAN_TEST_PENDING | Release 需合併後另跑 tag workflow；Server 2025 Runner 不等同 Windows 11 裝置 UAT |
+
+Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <packaged EXE> -PackagePath <portable ZIP> -VerifyNegativeControl`；run 39554220174 使用同一個 Windows build/package artifact 執行正向與負向 Gate、再核對 EXE/ZIP SHA。Evidence 只包含 runner、source SHA、UI 結果、例外型別與檔案 hash，不含帳號、Token 或額度資料。
+
 更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 
 ## 自動驗證
@@ -13,7 +35,7 @@
 | xUnit | Windows · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55 passed / 0 failed | run 39540874352; TRX artifact `windows-test-report` |
 | Claude PowerShell helper | Windows PowerShell 5.1 parser and synthetic input | PASS | `Test-ClaudeStatusline.ps1` step in run 39540874352 |
 | NuGet vulnerability audit | Windows · `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · all four projects reported no vulnerable packages | run 39540874352 `List dependency audit` step |
-| Windows x64 publish / release assets | `v0.1.0` release workflow | NOT RUN | awaits reviewed PR merge and authorized prerelease tag |
+| Windows x64 publish / release assets | `v0.1.1` release workflow | NOT RUN | awaits exact PR head checks, independent review, merge, then Windows smoke/hash workflow |
 | Windows 11 device UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 physical device was available |
 
 This run includes the isolated PowerShell JSON probe's terminating-error handling. The report records the tested source SHA; check PR #8 Checks for any later documentation-only head validation.

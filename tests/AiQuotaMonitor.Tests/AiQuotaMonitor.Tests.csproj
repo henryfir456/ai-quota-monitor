@@ -23,5 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\src\AiQuotaMonitor.App\**\*.xaml" Link="AppXaml\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

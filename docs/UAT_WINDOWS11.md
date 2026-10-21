@@ -20,5 +20,6 @@
 | 14 | 系統匣結束、工作管理員與 process tree | 主程式退出；Monitor 啟動的 Codex app-server 不殘留；不刪改 CLI 設定／憑證 | NOT RUN |
 | 15 | Release SHA-256、portable ZIP 內容、無簽章告知 | `SHA256SUMS.txt` 與下載檔一致；ZIP 含 README／PRIVACY／SECURITY／SBOM／helper | NOT RUN |
 | 16 | 系統匣／主視窗暫停與恢復監控 | 暫停停止週期及網路／喚醒自動刷新；進行中的刷新完成後不續排；手動刷新仍可用；恢復時立即刷新 | NOT RUN |
+| 17 | 安裝 Issue #9 修正後的 v0.1.1 prerelease 並雙擊啟動 | 可見主視窗保持開啟；Task Manager 有 `AiQuotaMonitor`；此次啟動沒有 .NET Runtime 1026；關閉主視窗後程式依既有設計常駐系統匣 | NOT RUN · 僅在該 prerelease 通過 Windows Actions smoke gate 後執行；不附事件原文或個人路徑 |
 
 UAT 結果只能在實際 Windows 11 裝置完成後更新。CI 建置、單元測試、Release asset 下載或 Linux 執行都不能代替第 1～16 項實機結果。
