@@ -1,6 +1,11 @@
 name: Windows portable prerelease
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj
   workflow_dispatch:
     inputs:
       release_tag:
@@ -36,9 +41,21 @@ jobs:
           DISPATCH_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           $expectedTag = 'v0.1.2'
-          if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch') { throw 'Only the reviewed manual release path may publish this prerelease.' }
-          if ($env:GITHUB_REF_NAME -ne 'main') { throw 'Manual prerelease dispatch must run from main.' }
-          if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
+          if ($env:GITHUB_REF_NAME -ne 'main') { throw 'Prerelease must run from main.' }
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
+          }
+          elseif ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $event = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+            if ($event.before -notmatch '^[0-9a-f]{40}$') { throw 'Version-bump release requires a complete prior main SHA.' }
+            $previousProjectText = git show "$($event.before):src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the prior application version.' }
+            [xml]$previousProject = $previousProjectText -join "`n"
+            if ($previousProject.Project.PropertyGroup.Version -ne '0.1.1') { throw 'Automatic prerelease requires a direct 0.1.1 to 0.1.2 version change.' }
+            $changedPaths = @(git diff --name-only $event.before $env:GITHUB_SHA)
+            if ($LASTEXITCODE -ne 0 -or $changedPaths -notcontains 'src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj') { throw 'Automatic prerelease requires the application version project file to change.' }
+          }
+          else { throw 'Only main version-bump pushes or reviewed manual dispatches may publish this prerelease.' }
           $existingTag = git ls-remote --tags origin "refs/tags/$expectedTag" "refs/tags/$expectedTag^{}"
           if ($LASTEXITCODE -ne 0) { throw 'Could not check whether the v0.1.2 tag already exists.' }
           if ($existingTag) { throw 'Manual prerelease dispatch refuses to replace an existing tag.' }
@@ -232,12 +249,12 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: v0.1.2
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" || "$GITHUB_REF_NAME" != "main" || "$RELEASE_TAG" != "v0.1.2" ]]; then
-            echo 'Release dispatch must be v0.1.2 from main.' >&2
+          if [[ ("$GITHUB_EVENT_NAME" != "workflow_dispatch" && "$GITHUB_EVENT_NAME" != "push") || "$GITHUB_REF_NAME" != "main" || "$RELEASE_TAG" != "v0.1.2" ]]; then
+            echo 'Release must be v0.1.2 from a guarded main event.' >&2
             exit 1
           fi
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then

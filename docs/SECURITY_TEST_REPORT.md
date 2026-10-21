@@ -20,14 +20,14 @@ Monitor 不讀取 Codex 或 Claude credential 檔、不自動登入、不安裝�
 
 ## Issue #11 v0.1.2 安全驗證狀態
 
-以下是本 PR 需於同一完整 head SHA 驗證的範圍；在 Windows Actions 尚未執行前標記 `NOT RUN`。不會以原 v0.1.1 Windows Gate 或 synthetic fixture 代替。
+以下驗證適用於完整 PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917`，由 [Actions run 39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848) 的 Windows Server 2025 與 Ubuntu GitHub-hosted runners 執行。Windows 11 UAT 與真實供應商帳號驗證仍分別 pending/not verified；合成 fixture 不代表真實額度。
 
 | 檢查 | 風險控制 | 狀態 |
 | --- | --- | --- |
-| Claude setup | 啟動時不讀設定；使用者確認檢查後才讀；不可讀檔與競爭建立 fail closed；journal 先於設定寫入；既有 statusLine 不覆寫；復原拒絕覆寫被修改的狀態列 | NOT RUN · xUnit/Windows Actions |
-| Claude helper | helper 只送合法 rate_limits 欄位或固定錯誤代碼；錯誤百分比/reset 轉安全 sentinel；malformed JSON、session ID、transcript path 不輸出、不記錄 | NOT RUN · xUnit/Windows PowerShell |
-| Codex account probe | `account/read` 使用 `refreshToken=false`，只判斷 account null/object；錯誤訊息及 account identifier 不進 UI、log 或測試輸出 | NOT RUN · synthetic JSON-RPC tests |
-| Codex process | CLI 路徑只接受 codex.exe 候選；程序採 OS env allowlist、stderr 丟棄、短生命週期；不碰 credential 檔 | NOT RUN · xUnit/Windows Actions |
-| Diagnostics/timestamps | UI 僅用固定錯誤碼映射本地化建議；原始配額/帳號資料不入 log；失敗清除百分比且保留最後成功時間 | NOT RUN · xUnit |
-| Secret scan | Gitleaks full-history | NOT RUN · PR Ubuntu Actions |
+| Claude setup | 啟動時不讀設定；使用者確認檢查後才讀；不可讀檔與競爭建立 fail closed；journal 先於設定寫入；既有 statusLine 不覆寫；復原拒絕覆寫被修改的狀態列 | PASS · Windows xUnit 123/123 |
+| Claude helper | helper 只送合法 rate_limits 欄位或固定錯誤代碼；錯誤百分比/reset 轉安全 sentinel；malformed JSON、session ID、transcript path 不輸出、不記錄 | PASS · Windows xUnit + PowerShell 5.1 synthetic parser |
+| Codex account probe | `account/read` 使用 `refreshToken=false`，只判斷 account null/object；錯誤訊息及 account identifier 不進 UI、log 或測試輸出 | PASS · synthetic JSON-RPC within Windows xUnit |
+| Codex process | CLI 路徑只接受 codex.exe 候選；程序採 OS env allowlist、stderr 丟棄、短生命週期；不碰 credential 檔 | PASS · Windows xUnit |
+| Diagnostics/timestamps | UI 僅用固定錯誤碼映射本地化建議；原始配額/帳號資料不入 log；失敗清除百分比且保留最後成功時間 | PASS · Windows xUnit |
+| Secret scan | Gitleaks full-history | PASS · Ubuntu PR job |
 | Actual vendor accounts | 本環境不讀取登入憑證，不自動登入、不推論 | NOT VERIFIED · Windows 11 UAT pending |

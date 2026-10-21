@@ -7,12 +7,17 @@ const test = require('node:test');
 
 const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/release.yml'), 'utf8');
 
-test('v0.1.2 release is serialized across refs and only dispatches from main', () => {
+test('v0.1.2 release has a narrow main version-bump trigger and a manual fallback', () => {
   assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /^\s+push:/m);
+  assert.match(workflow, /push:\s+branches:\s+- main\s+paths:\s+- src\/AiQuotaMonitor\.App\/AiQuotaMonitor\.App\.csproj/);
   assert.match(workflow, /group: windows-release-v0\.1\.2/);
   assert.match(workflow, /GITHUB_REF_NAME -ne 'main'/);
   assert.match(workflow, /DISPATCH_RELEASE_TAG -ne \$expectedTag/);
+  assert.match(workflow, /GITHUB_EVENT_NAME -eq 'push'/);
+  assert.match(workflow, /\$event\.before/);
+  assert.match(workflow, /-ne '0\.1\.1'/);
+  assert.match(workflow, /changedPaths -notcontains 'src\/AiQuotaMonitor\.App\/AiQuotaMonitor\.App\.csproj'/);
+  assert.match(workflow, /GITHUB_EVENT_NAME.*workflow_dispatch.*GITHUB_EVENT_NAME.*push/);
 });
 
 test('publisher atomically creates and verifies the exact tested source tag after Windows gates', () => {

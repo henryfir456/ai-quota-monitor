@@ -24,12 +24,19 @@ Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <p
 
 ## Issue #11 / v0.1.2 額度來源修正
 
-目前工作分支新增 synthetic tests：Claude official statusline helper 設定、備份、衝突、復原、解析錯誤和 15 分鐘無輸入逾時；Codex app-server capability、`account/read refreshToken=false`、已登入／未登入與 rate-limit response；兩者皆含 missing install、parse failure、timeout、不支援、失敗後保留成功時間及 UI 診斷更新測試。
+本 PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917` 已於 Windows Server 2025 與 Ubuntu GitHub-hosted runners 完成可重現驗證：[Actions run 39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848)。Windows job restore/build、123/123 xUnit、Claude helper 合成輸入及 PowerShell script parse、dependency audit、最終 packaged EXE smoke、故意啟動失敗反向測試和同一 EXE/ZIP SHA-256 檢查均通過；Ubuntu governance/Gitleaks 通過。
 
-- 本地驗證：`dotnet` 與 `pwsh` 未安裝；C# build/xUnit 和 Windows PowerShell 測試均 `NOT RUN`。`node` 可用於 repository governance suite，結果待執行。
-- Windows packaged EXE smoke：尚未以本分支成品執行，等待此 PR 的 Windows Actions；舊 v0.1.1 evidence 不代表 v0.1.2。
-- 真實供應商資料：`NOT VERIFIED`。未在此環境啟動 Claude Code/Codex、登入、讀取 Token 或執行推論；合成百分比不是實際額度。
-- Windows 11 實機 UAT：`HUMAN_TEST_PENDING`；需安裝 v0.1.2 後分別驗證真實 statusline 輸入與 Codex Desktop/CLI 版本，但公開紀錄不得包含帳號或額度原始資料。
+| 最終 Windows 產物 Gate | 結果 | 安全證據 |
+| --- | --- | --- |
+| 最終 EXE GUI 啟動與 ready 狀態 | PASS | Main window/UI ready、offline/no-account/no-token 隔離啟動；程序至少存活 5 秒；無匹配未處理崩潰事件 |
+| 故意失敗反向測試 | PASS | 注入 `XamlParseException` 後未寫 UI ready；Gate 判定失敗啟動 |
+| xUnit / PowerShell helper | PASS | Windows xUnit 123/123；helper 測試僅使用合成 statusline JSON；所有 PowerShell scripts 可解析 |
+| 同一產物 SHA-256 | PASS | standalone EXE `22f8a4b515f7562c3ef40158eecef12c3d33da5c606aaf26f9e45ff47617aaa9`；portable ZIP `cb501e319332b5602aa544a60df534fba040334624f1619867aa92aaf40a5ff2` |
+| Runner evidence artifact | 已上傳 | `windows-packaged-smoke-evidence`，artifact ID `12333085408`；不含帳號、Token、真實配額或供應商原始回應 |
+
+- 真實供應商資料：`NOT VERIFIED`。未在此環境啟動真實 Claude Code/Codex 帳號、登入、讀取 Token 或執行推論；合成百分比不是實際額度。
+- Windows 11 實機 UAT：`HUMAN_TEST_PENDING`。上述 runner 是 Windows Server 2025，不能代替 Windows 11 裝置；請按 `docs/UAT_WINDOWS11.md` 驗證真實 statusline 輸入與 Codex Desktop/CLI 版本，公開紀錄不得包含帳號或額度原始資料。
+- 本機 Linux 不具備 `dotnet`、`pwsh` 或 GUI，因此未宣稱本機 build 或 Windows GUI 測試。
 
 更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 

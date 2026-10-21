@@ -29,18 +29,18 @@ Issue #9 / PR #10 新增 Gate 已在程式來源 SHA `61b64cef0f58ec16064e321369
 
 ## Issue #11 v0.1.2 本輪測試
 
-下列測試使用官方 protocol 形狀和合成回應；PR head Windows Actions 尚未執行前皆為 `NOT RUN`。它們不證明真實帳號成功取得額度。
+下列測試使用官方 protocol 形狀和合成回應；PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917` 的 Windows/Ubuntu Actions run [39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848) 全部通過。它們不證明真實帳號成功取得額度。
 
 | Provider / 狀態 | 測試方式 | 預期 | 狀態 |
 | --- | --- | --- | --- |
-| Claude success | 官方 `rate_limits.five_hour` / `seven_day` 合成 JSON，透過 PowerShell helper 與 CurrentUserOnly pipe | 只傳百分比/reset，UI 新增成功時間；測試資料清楚標示合成 | NOT RUN · Windows Actions |
-| Claude unconfigured / uninstalled | provider 初始狀態與 executable locator | 分別顯示未設定、找不到 CLI；不啟動 Claude | NOT RUN · xUnit |
-| Claude parse failure / unsupported shape | malformed JSON 與非 object JSON 經 helper/parser | 顯示解析失敗或未支援；不外洩原文、不保留數字 | NOT RUN · xUnit + Windows PowerShell |
-| Claude no-input timeout / old success | 設定後超過 15 分鐘無 pipe 輸入；成功資料超過 freshness window | 前者顯示逾時；後者顯示過期並保留最後成功時間 | NOT RUN · xUnit |
-| Claude settings configure / conflict / rollback | 暫存使用者 profile、合成 `settings.json` 與 Windows ACL | 啟動時不讀設定；同意檢查後讀取；不可讀檔不能誤判為不存在；復原 journal 先於設定寫入；新檔 no-overwrite；衝突保留其他設定；helper 使用 PS 5.1 可讀 BOM | NOT RUN · Windows xUnit |
-| Codex success | 官方 initialize/account/read/rateLimits JSONL 合成回應 | `experimentalApi=true`、`refreshToken=false`、期限映射正確；回應不保留帳號識別 | NOT RUN · xUnit |
-| Codex uninstalled / not logged in | locator no-match 與 `account:null` 合成 RPC | 顯示未安裝／未登入並提供建議；不嘗試登入或額度推測 | NOT RUN · xUnit |
-| Codex parse failure / timeout / unsupported | malformed response、provider timeout、RPC -32601、未知窗口 schema | 各自顯示明確狀態；百分比保持 N/A | NOT RUN · xUnit |
-| Refresh timestamp and UI state | success 後接失敗快照並監聽 ViewModel property change | 失敗不保留舊百分比；最後成功時間保留且診斷即時更新 | NOT RUN · xUnit |
-| Final v0.1.2 packaged EXE | 現有 `.github/workflows/ci.yml` Windows final package GUI smoke、reverse control 與 SHA identity | offline/no-account/no-token 啟動 PASS；失敗或 UNKNOWN 阻止 Release | NOT RUN · Windows Actions |
+| Claude success | 官方 `rate_limits.five_hour` / `seven_day` 合成 JSON，透過 PowerShell helper 與 CurrentUserOnly pipe | 只傳百分比/reset，UI 新增成功時間；測試資料清楚標示合成 | PASS · 123/123 Windows xUnit + PowerShell helper |
+| Claude unconfigured / uninstalled | provider 初始狀態與 executable locator | 分別顯示未設定、找不到 CLI；不啟動 Claude | PASS · Windows xUnit |
+| Claude parse failure / unsupported shape | malformed JSON 與非 object JSON 經 helper/parser | 顯示解析失敗或未支援；不外洩原文、不保留數字 | PASS · Windows xUnit + PowerShell 5.1 |
+| Claude no-input timeout / old success | 設定後超過 15 分鐘無 pipe 輸入；成功資料超過 freshness window | 前者顯示逾時；後者顯示過期並保留最後成功時間 | PASS · Windows xUnit |
+| Claude settings configure / conflict / rollback | 暫存使用者 profile、合成 `settings.json` 與 Windows ACL | 啟動時不讀設定；同意檢查後讀取；不可讀檔不能誤判為不存在；journal 先於設定寫入；新檔 no-overwrite；衝突保留其他設定；helper 使用 PS 5.1 可讀 BOM | PASS · Windows xUnit |
+| Codex success | 官方 initialize/account/read/rateLimits JSONL 合成回應 | `experimentalApi=true`、`refreshToken=false`、期限映射正確；回應不保留帳號識別 | PASS · Windows xUnit |
+| Codex uninstalled / not logged in | locator no-match 與 `account:null` 合成 RPC | 顯示未安裝／未登入並提供建議；不嘗試登入或額度推測 | PASS · Windows xUnit |
+| Codex parse failure / timeout / unsupported | malformed response、provider timeout、RPC -32601、未知窗口 schema | 各自顯示明確狀態；百分比保持 N/A | PASS · Windows xUnit |
+| Refresh timestamp and UI state | success 後接失敗快照並監聽 ViewModel property change | 失敗不保留舊百分比；最後成功時間保留且診斷即時更新 | PASS · Windows xUnit |
+| Final v0.1.2 packaged EXE | Windows final package GUI smoke、reverse control 與 SHA identity | offline/no-account/no-token 啟動 PASS；失敗或 UNKNOWN 阻止 Release | PASS · Windows Server 2025; EXE `22f8a4b515f7562c3ef40158eecef12c3d33da5c606aaf26f9e45ff47617aaa9`; ZIP `cb501e319332b5602aa544a60df534fba040334624f1619867aa92aaf40a5ff2` |
 | Real provider accounts | Windows 11 真實 Claude Code/Codex 版本與登入狀態 | 只有實際來源回報欄位後才能記錄額度讀取成功 | HUMAN_TEST_PENDING |

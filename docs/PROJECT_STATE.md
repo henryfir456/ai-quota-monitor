@@ -7,11 +7,12 @@
 
 ## 本次交付進度
 
-- Issue #11 分支 `codex/issue-11-quota-sources` 正在實作 v0.1.2：Codex initialize 加入 `experimentalApi=true`，以 `account/read`（`refreshToken=false`）辨識未登入，再讀官方額度 RPC；Claude statusline 增加使用者確認、完整本機備份、衝突保護與可復原設定流程。
+- Issue #11 分支 `codex/issue-11-quota-sources` 已完成 v0.1.2 候選實作：Codex initialize 加入 `experimentalApi=true`，以 `account/read`（`refreshToken=false`）辨識未登入，再讀官方額度 RPC；Claude statusline 增加使用者確認、完整本機備份、衝突保護與可復原設定流程。
 - Claude/Codex 卡片與浮動面板呈現來源、最後成功時間、細分狀態、固定錯誤代碼及繁中建議。合成測試覆蓋成功、未設定／未安裝、未登入、解析失敗、逾時和過期；這些資料不是實際帳號額度。
-- 本分支 Windows CI、最終 packaged EXE Windows Runner smoke、獨立 review、PR、merge、Release 尚未執行或完成。Linux 開發環境沒有 `dotnet`、`pwsh` 或 GUI；未作 C#／WPF 測試宣稱。
+- 完整 PR head `92b68a7e0e6549ab8f2a8ab114d45f3b3d106917` 的 Windows Server 2025 packaged-EXE gate 與 Ubuntu governance 已於 [Actions run 39572768848](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39572768848) PASS；Windows xUnit 123/123、PowerShell helper/parser、dependency audit、最終 EXE 正向啟動／故意失敗反向測試及同一產物 SHA 驗證通過。EXE SHA-256 `22f8a4b515f7562c3ef40158eecef12c3d33da5c606aaf26f9e45ff47617aaa9`、portable ZIP SHA-256 `cb501e319332b5602aa544a60df534fba040334624f1619867aa92aaf40a5ff2`；artifact ID `12333085408`。Windows 11 實機與真實供應商帳號仍待驗證。PR review 已檢查程式碼；文件／發布觸發器後續更新後，仍須以最新 head 再確認。
+- PR #12 的 merge、Release 尚未完成。Windows Runner 已具備本輪 C#／WPF 與最終 packaged EXE 測試證據；Linux 開發環境本身沒有 `dotnet`、`pwsh` 或 GUI，不宣稱本機 Windows 測試。
 - Codex Desktop 實際 package 位置/ACL、已安裝 CLI 版本，以及真實 Claude/Codex 帳號是否提供額度欄位均 `NOT VERIFIED`。Windows 11 真實帳號 UAT 保持 `HUMAN_TEST_PENDING`。
-- Release 建置使用 v0.1.2，透過只允許 `main` 和固定 tag 的 `workflow_dispatch` 作為已授權替代發布入口；最終 Release job 依賴 Windows smoke、故障反向案例及 SHA-256 檢查，不先在工作站建立 tag。
+- Release 建置使用 v0.1.2，入口限定為 `main` 上 app version 由 v0.1.1 變更到 v0.1.2 的 push，並保留固定 tag `workflow_dispatch` 手動備援；最終 Release job 依賴 Windows smoke、故障反向案例及 SHA-256 檢查，不先在工作站建立 tag。
 
 - v0.1.0 已發布後，使用者在 Windows 11 確認程式啟動崩潰。Issue #9 已記錄唯讀 `QuotaWindowViewModel.ProgressValue` 指向 WPF `ProgressBar.Value` 的預設 TwoWay Binding 為根因；本修正明確將相關 XAML Binding 設為 OneWay。
 - PR #10 原先只有政策文字。本輪同 PR 補上 XAML regression、final-package GUI smoke、故意失敗反向案例、SHA256 成品同一性驗證與 fail-closed Release dependency。
