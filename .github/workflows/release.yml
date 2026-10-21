@@ -332,6 +332,10 @@ jobs:
             echo 'Could not verify a draft v0.1.2 Release.' >&2
             exit 1
           fi
+          if [[ "$(jq -r '.tag_name' <<< "$release_json")" != "$RELEASE_TAG" ]]; then
+            echo 'Draft Release tag name differs from the verified source tag.' >&2
+            exit 1
+          fi
           release_body="$(jq -r '.body // ""' <<< "$release_json")"
           grep -Fqx "Release source SHA: \`$EXPECTED_SHA\`" <<< "$release_body" || {
             echo 'Draft release metadata does not match the tested source SHA.' >&2; exit 1;
@@ -427,6 +431,11 @@ jobs:
             fi
           done
 
+          publish_tag_sha="$(resolve_tag_commit)" || { echo 'Could not re-resolve the release tag before publication.' >&2; exit 1; }
+          if [[ "$publish_tag_sha" != "$EXPECTED_SHA" ]]; then
+            echo 'Release tag changed after artifact verification; refusing publication.' >&2
+            exit 1
+          fi
           published_json="$(gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" \
             -F draft=false -F prerelease=true)"
           if [[ "$(jq -r '.draft' <<< "$published_json")" != false || "$(jq -r '.prerelease' <<< "$published_json")" != true ]]; then

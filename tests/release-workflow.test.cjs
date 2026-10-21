@@ -42,6 +42,7 @@ test('publisher resumes only the exact draft, validates every remote asset, then
   const remoteDownload = publisher.indexOf('gh release download "$RELEASE_TAG" --pattern "$name" --dir "$remote_dir"');
   const exactAssetCount = publisher.indexOf('Draft does not contain exactly the verified Windows release assets.');
   const finalHashCheck = publisher.lastIndexOf('Final draft asset SHA-256 mismatch:');
+  const finalTagCheck = publisher.indexOf('publish_tag_sha="$(resolve_tag_commit)"');
   const publish = publisher.indexOf('gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id"');
 
   assert.ok(draftCreate >= 0);
@@ -51,7 +52,10 @@ test('publisher resumes only the exact draft, validates every remote asset, then
   assert.ok(remoteDownload > upload);
   assert.ok(exactAssetCount > remoteDownload);
   assert.ok(finalHashCheck > exactAssetCount);
-  assert.ok(publish > finalHashCheck);
+  assert.ok(finalTagCheck > finalHashCheck);
+  assert.ok(publish > finalTagCheck);
+  assert.match(publisher, /Draft Release tag name differs from the verified source tag/);
+  assert.match(publisher, /Release tag changed after artifact verification; refusing publication/);
   assert.match(publisher, /Existing draft artifact manifest differs from this exact package/);
   assert.match(publisher, /Existing draft asset differs from this exact artifact/);
   assert.match(publisher, /expected_names\+=\("SHA256SUMS\.txt"\)/);
