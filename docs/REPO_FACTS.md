@@ -20,7 +20,7 @@
 | GitHub Action pins | checkout `11d596…`、setup-node `49933…`、setup-dotnet `67a357…`、upload-artifact `ea165…`、download-artifact `d3f86…`、gitleaks `ff981…`、softprops `3bb127…` | `docs/DEPENDENCIES.md`；commit SHA pins |
 | Provider sources | Codex official app-server `account/rateLimits/read`; optional Claude official statusline local JSON | `docs/providers/codex-evidence.md`, `claude-evidence.md`; CLI versions UNKNOWN |
 | Token / data paths | No credential file access by Monitor; Codex child receives OS env allowlist; Claude sends two rate-limit windows over current-user pipe | Provider source, security/privacy docs; app-server itself manages Codex auth/network |
-| Local settings | `%LOCALAPPDATA%\AiQuotaMonitor\settings.json` | Schema 1, atomic replace, non-sensitive UI/interval/alert/startup prefs only |
+| Local settings | `%LOCALAPPDATA%\AiQuotaMonitor\settings.json` | Schema 1, atomic replace, non-sensitive UI/interval/alert/startup/floating-panel prefs only; pause is session-only |
 | Default refresh / timeout | 300 sec / 10 sec per provider; manual throttle 10 sec | MainViewModel and QuotaRefreshService; timeout/backoff tests pending Windows runner |
 | Release | tag `v0.1.0`, Windows x64 `PublishSingleFile`, portable ZIP + standalone EXE + SHA256 + SPDX SBOM + reports | `.github/workflows/release.yml`; not yet run |
 | Release state | Consult GitHub tag `v0.1.0` and release workflow | This task authorizes only the scoped prerelease after required gates |

@@ -40,6 +40,7 @@
             <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="刷新" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanManualRefresh}" AutomationProperties.Name="立即刷新額度資料" />
+                    <Button Content="{Binding MonitoringPauseButtonText}" Command="{Binding ToggleMonitoringPauseCommand}" AutomationProperties.Name="{Binding MonitoringPauseButtonText}" />
                     <Button Content="{Binding UsageButtonText}" Command="{Binding ToggleUsageCommand}" AutomationProperties.Name="切換已用或剩餘百分比" />
                     <Button Content="{Binding CollapseButtonText}" Command="{Binding ToggleCollapseCommand}" AutomationProperties.Name="收合或展開供應商卡片" />
                 </StackPanel>
@@ -54,11 +55,10 @@
                 <TextBlock Text="Claude Code 與 Codex · Windows 11" Foreground="{DynamicResource SecondaryForeground}" Margin="0,4,0,0" />
             </StackPanel>
         </DockPanel>
-        <TextBlock Grid.Row="1"
-                   Text="{Binding StatusMessage}"
-                   Foreground="{DynamicResource SecondaryForeground}"
-                   TextWrapping="Wrap"
-                   Margin="0,14,0,0" />
+        <StackPanel Grid.Row="1" Margin="0,14,0,0">
+            <TextBlock Text="{Binding MonitoringStatusText}" Foreground="{DynamicResource SecondaryForeground}" />
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource SecondaryForeground}" TextWrapping="Wrap" />
+        </StackPanel>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
             <ItemsControl ItemsSource="{Binding Providers}">
                 <ItemsControl.ItemsPanel>

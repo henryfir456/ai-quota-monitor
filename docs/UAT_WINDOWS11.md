@@ -14,10 +14,11 @@
 | 8 | 主題、已用／剩餘切換、卡片收合、立即刷新 | 控制操作有效；手動刷新 10 秒節流；百分比模式與 bar 一致 | NOT RUN |
 | 9 | 深色／淺色與文字縮放／鍵盤操作 | 對比與焦點可見；常用按鈕可鍵盤操作；Automation name 可讀 | NOT RUN |
 | 10 | 系統匣、關閉主視窗、再次開啟、第二次啟動 | 關閉視窗縮至系統匣；雙擊／選單恢復；第二次啟動聚焦第一個視窗 | NOT RUN |
-| 11 | 精簡浮動面板 | 可拖曳、縮放、保持最上層；跨螢幕／DPI 移動後重開位置可恢復；位置超出顯示器時回到可見工作區 | NOT RUN |
+| 11 | 精簡浮動面板 | 可拖曳、縮放；設定中可切換置頂；跨螢幕／DPI 移動後重開位置可恢復；位置超出顯示器時回到可見工作區 | NOT RUN |
 | 12 | 睡眠／恢復、網路失聯／恢復、provider timeout | 喚醒／恢復網路後刷新；無重疊；來源間隔離；退避不超過 30 分鐘 | NOT RUN |
 | 13 | 設定 interval、低額度提醒、登入啟動 | 60～1800 秒；HKCU startup 預設關閉且只在使用者選取後設定；錯誤設定被拒絕 | NOT RUN |
 | 14 | 系統匣結束、工作管理員與 process tree | 主程式退出；Monitor 啟動的 Codex app-server 不殘留；不刪改 CLI 設定／憑證 | NOT RUN |
 | 15 | Release SHA-256、portable ZIP 內容、無簽章告知 | `SHA256SUMS.txt` 與下載檔一致；ZIP 含 README／PRIVACY／SECURITY／SBOM／helper | NOT RUN |
+| 16 | 系統匣／主視窗暫停與恢復監控 | 暫停停止週期及網路／喚醒自動刷新；進行中的刷新完成後不續排；手動刷新仍可用；恢復時立即刷新 | NOT RUN |
 
-UAT 結果只能在實際 Windows 11 裝置完成後更新。CI 建置、單元測試、Release asset 下載或 Linux 執行都不能代替第 1～15 項實機結果。
+UAT 結果只能在實際 Windows 11 裝置完成後更新。CI 建置、單元測試、Release asset 下載或 Linux 執行都不能代替第 1～16 項實機結果。

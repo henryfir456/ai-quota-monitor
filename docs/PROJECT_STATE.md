@@ -10,8 +10,8 @@
 - #1：.NET 8 WPF/MVVM solution、Core quota DTO、provider contract/coordinator、合成單元測試。
 - #2：Codex 官方 app-server `account/rateLimits/read`、JSONL client、時間窗依 `windowDurationMins` 映射；不開啟 credential 檔。
 - #3：Claude 官方 statusline JSON 欄位、使用者自行設定的本機 helper、CurrentUserOnly named pipe；不讀 credential 檔或修改 Claude 設定。
-- #4：繁體中文 Claude/Codex 雙卡、5 小時與每週百分比、reset/countdown、失敗／過期／不支援狀態、深淺色主題與精簡浮動面板。
-- #5：系統匣、單一實例、300 秒預設輪詢、人工刷新節流、provider timeout/backoff、resume/network refresh、可選低額提醒與 Windows startup。
+- #4：繁體中文 Claude/Codex 雙卡、5 小時與每週百分比、reset/countdown、失敗／過期／不支援狀態、深淺色主題與可選置頂精簡浮動面板。
+- #5：系統匣、單一實例、300 秒預設輪詢、暫停／恢復自動監控、人工刷新節流、provider timeout/backoff、resume/network refresh、可選低額提醒與 Windows startup。
 - #6：README、PRIVACY、SECURITY、threat model、synthetic leakage tests、NuGet audit、Gitleaks。
 - #7：Windows x64 self-contained publish、portable ZIP、standalone EXE、SHA-256、SPDX SBOM、dependencies/test report 與 Windows 11 UAT 清單。
 

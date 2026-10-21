@@ -67,12 +67,8 @@ public sealed class ClaudeStatuslineBridgeTests
         startInfo.ArgumentList.Add("-NoProfile");
         startInfo.ArgumentList.Add("-File");
         startInfo.ArgumentList.Add(helperPath);
-        var inheritedEnvironment = Environment.GetEnvironmentVariables()
-            .Cast<System.Collections.DictionaryEntry>()
-            .Where(entry => entry.Key is string && entry.Value is string)
-            .Select(entry => new KeyValuePair<string, string?>((string)entry.Key, (string)entry.Value!));
         startInfo.Environment.Clear();
-        foreach (var variable in CodexProcessEnvironment.Filter(inheritedEnvironment))
+        foreach (var variable in CodexProcessEnvironment.ReadCurrent())
         {
             startInfo.Environment[variable.Key] = variable.Value;
         }

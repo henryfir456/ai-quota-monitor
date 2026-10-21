@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AiQuotaMonitor.Core;
 using AiQuotaMonitor.Providers.Claude;
 
@@ -33,7 +34,7 @@ public sealed class ClaudeStatuslineParserTests
     [InlineData(100d, 0d)]
     public void ZeroAndFullUsedValuesMapToTheOppositeRemainingEdge(double used, double remaining)
     {
-        var json = $$"""{"rate_limits":{"five_hour":{"used_percentage":{{used}}}}}""";
+        var json = JsonSerializer.Serialize(new { rate_limits = new { five_hour = new { used_percentage = used } } });
 
         var observation = ClaudeStatuslineParser.Parse(json, DateTimeOffset.UtcNow)
             .Windows.Single(window => window.WindowId == WindowId.FiveHour);
@@ -46,7 +47,7 @@ public sealed class ClaudeStatuslineParserTests
     [InlineData(100.1)]
     public void OutOfRangeUsedPercentageDoesNotProduceRemainingValue(double used)
     {
-        var json = $$"""{"rate_limits":{"five_hour":{"used_percentage":{{used}}}}}""";
+        var json = JsonSerializer.Serialize(new { rate_limits = new { five_hour = new { used_percentage = used } } });
 
         var observation = ClaudeStatuslineParser.Parse(json, DateTimeOffset.UtcNow)
             .Windows.Single(window => window.WindowId == WindowId.FiveHour);

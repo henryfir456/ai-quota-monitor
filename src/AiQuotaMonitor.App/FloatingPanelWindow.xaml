@@ -9,7 +9,7 @@
         ResizeMode="CanResizeWithGrip"
         WindowStyle="ToolWindow"
         ShowInTaskbar="False"
-        Topmost="True"
+        Topmost="{Binding Settings.FloatingAlwaysOnTop}"
         Background="{DynamicResource WindowBackground}"
         Foreground="{DynamicResource WindowForeground}"
         Loaded="Window_Loaded"

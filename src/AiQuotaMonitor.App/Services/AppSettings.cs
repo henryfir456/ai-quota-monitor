@@ -22,6 +22,8 @@ public sealed record AppSettings
 
     public bool StartWithWindows { get; init; }
 
+    public bool FloatingAlwaysOnTop { get; init; } = true;
+
     public double? FloatingLeft { get; init; }
 
     public double? FloatingTop { get; init; }

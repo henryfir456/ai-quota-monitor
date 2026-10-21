@@ -16,6 +16,7 @@ public partial class SettingsWindow : Window
         AlertThresholdBox.ItemsSource = new[] { 10, 20 };
         AlertThresholdBox.SelectedItem = _settings.AlertThresholdPercent;
         StartWithWindowsCheckBox.IsChecked = _settings.StartWithWindows;
+        FloatingAlwaysOnTopCheckBox.IsChecked = _settings.FloatingAlwaysOnTop;
     }
 
     public AppSettings UpdatedSettings { get; private set; } = new();
@@ -34,7 +35,8 @@ public partial class SettingsWindow : Window
             RefreshIntervalSeconds = refreshSeconds,
             LowAlertsEnabled = LowAlertsCheckBox.IsChecked == true,
             AlertThresholdPercent = AlertThresholdBox.SelectedItem is int threshold ? threshold : 20,
-            StartWithWindows = StartWithWindowsCheckBox.IsChecked == true
+            StartWithWindows = StartWithWindowsCheckBox.IsChecked == true,
+            FloatingAlwaysOnTop = FloatingAlwaysOnTopCheckBox.IsChecked == true
         };
         DialogResult = true;
     }

@@ -32,6 +32,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isRefreshing;
     private bool _started;
     private bool _isCollapsed;
+    private bool _isMonitoringPaused;
     private int _consecutiveFailures;
     private bool _refreshAfterCurrent;
     private DateTimeOffset? _lastManualRefreshAt;
@@ -60,6 +61,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ToggleThemeCommand = new RelayCommand(ToggleTheme);
         ToggleUsageCommand = new RelayCommand(ToggleUsageDisplay);
         ToggleCollapseCommand = new RelayCommand(() => IsCollapsed = !IsCollapsed);
+        ToggleMonitoringPauseCommand = new RelayCommand(ToggleMonitoringPause);
         OpenSettingsCommand = new RelayCommand(() => SettingsRequested?.Invoke());
         OpenFloatingPanelCommand = new RelayCommand(() => FloatingPanelRequested?.Invoke());
 
@@ -87,6 +89,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public event Action? FloatingPanelRequested;
 
+    public event Action<bool>? MonitoringPauseChanged;
+
     public event Action<ThemeMode>? ThemeChanged;
 
     public ObservableCollection<ProviderCardViewModel> Providers { get; }
@@ -98,6 +102,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public RelayCommand ToggleUsageCommand { get; }
 
     public RelayCommand ToggleCollapseCommand { get; }
+
+    public RelayCommand ToggleMonitoringPauseCommand { get; }
 
     public RelayCommand OpenSettingsCommand { get; }
 
@@ -131,7 +137,25 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public bool IsMonitoringPaused
+    {
+        get => _isMonitoringPaused;
+        private set
+        {
+            if (SetField(ref _isMonitoringPaused, value))
+            {
+                OnPropertyChanged(nameof(MonitoringPauseButtonText));
+                OnPropertyChanged(nameof(MonitoringStatusText));
+                MonitoringPauseChanged?.Invoke(value);
+            }
+        }
+    }
+
     public string CollapseButtonText => IsCollapsed ? "展開卡片" : "收合卡片";
+
+    public string MonitoringPauseButtonText => IsMonitoringPaused ? "恢復監控" : "暫停監控";
+
+    public string MonitoringStatusText => IsMonitoringPaused ? "自動刷新與提醒已暫停；手動刷新仍可使用。" : "自動監控中。";
 
     public string UsageButtonText => _settings.ShowUsedPercent ? "顯示剩餘" : "顯示已用";
 
@@ -161,7 +185,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task RefreshAsync(bool isManual = false)
     {
-        if (IsRefreshing || _lifetime.IsCancellationRequested || (isManual && !CanManualRefresh))
+        var trigger = isManual ? RefreshTrigger.Manual : RefreshTrigger.Scheduled;
+        if (!MonitoringRefreshPolicy.CanStart(IsMonitoringPaused, IsRefreshing, trigger) ||
+            _lifetime.IsCancellationRequested ||
+            (isManual && !CanManualRefresh))
         {
             return;
         }
@@ -191,9 +218,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
             var hasFailure = snapshots.SelectMany(snapshot => snapshot.Windows).Any(window => window.Status == QuotaStatus.Error);
             _consecutiveFailures = hasFailure ? Math.Min(_consecutiveFailures + 1, 6) : 0;
-            StatusMessage = hasFailure
-                ? $"部分來源查詢失敗；將於 {NextRefreshInterval.TotalMinutes:0} 分鐘後重試。"
-                : $"最後查詢：{DateTimeOffset.Now:yyyy/MM/dd HH:mm:ss} · 下次約 {NextRefreshInterval.TotalMinutes:0} 分鐘後刷新";
+            StatusMessage = IsMonitoringPaused
+                ? hasFailure ? "部分來源查詢失敗；自動監控仍暫停。" : "手動刷新完成；自動監控仍暫停。"
+                : hasFailure
+                    ? $"部分來源查詢失敗；將於 {NextRefreshInterval.TotalMinutes:0} 分鐘後重試。"
+                    : $"最後查詢：{DateTimeOffset.Now:yyyy/MM/dd HH:mm:ss} · 下次約 {NextRefreshInterval.TotalMinutes:0} 分鐘後刷新";
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
         {
@@ -202,7 +231,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             IsRefreshing = false;
             OnPropertyChanged(nameof(RefreshCooldownText));
-            if (_refreshAfterCurrent && !_lifetime.IsCancellationRequested)
+            if (_refreshAfterCurrent && !IsMonitoringPaused && !_lifetime.IsCancellationRequested)
             {
                 _refreshAfterCurrent = false;
                 _ = RefreshAsync();
@@ -308,6 +337,26 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _lifetime.Dispose();
     }
 
+    public void ToggleMonitoringPause()
+    {
+        IsMonitoringPaused = !IsMonitoringPaused;
+        if (IsMonitoringPaused)
+        {
+            _refreshAfterCurrent = false;
+            _refreshTimer.Stop();
+            StatusMessage = "自動監控已暫停；進行中的查詢會完成，手動刷新仍可使用。";
+            return;
+        }
+
+        StatusMessage = _started
+            ? "自動監控已恢復；正在立即刷新來源…"
+            : "自動監控已恢復；啟動後會立即刷新來源。";
+        if (_started)
+        {
+            RequestLifecycleRefresh();
+        }
+    }
+
     private TimeSpan NextRefreshInterval
     {
         get
@@ -325,8 +374,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void ScheduleNextRefresh()
     {
-        if (!_started || _lifetime.IsCancellationRequested)
+        if (!MonitoringRefreshPolicy.CanScheduleNext(_started, IsMonitoringPaused, _lifetime.IsCancellationRequested))
         {
+            _refreshTimer.Stop();
             return;
         }
 
@@ -337,7 +387,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void CheckLowQuotaAlerts(ProviderSnapshot snapshot)
     {
-        if (!_settings.LowAlertsEnabled)
+        if (!MonitoringRefreshPolicy.CanSendAlert(IsMonitoringPaused, _settings.LowAlertsEnabled))
         {
             return;
         }
@@ -423,12 +473,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void RequestLifecycleRefresh()
     {
-        if (_lifetime.IsCancellationRequested)
+        if (_lifetime.IsCancellationRequested || !_started || !MonitoringRefreshPolicy.CanStart(
+                IsMonitoringPaused,
+                false,
+                RefreshTrigger.Lifecycle))
         {
             return;
         }
 
-        if (IsRefreshing)
+        if (MonitoringRefreshPolicy.CanQueueLifecycle(IsMonitoringPaused, IsRefreshing))
         {
             _refreshAfterCurrent = true;
             return;

@@ -17,7 +17,8 @@ public sealed class SettingsStoreTests
             Theme = ThemeMode.Light,
             ShowUsedPercent = true,
             LowAlertsEnabled = true,
-            AlertThresholdPercent = 10
+            AlertThresholdPercent = 10,
+            FloatingAlwaysOnTop = false
         });
 
         var json = File.ReadAllText(settingsPath);
@@ -26,6 +27,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(ThemeMode.Light, loaded.Theme);
         Assert.True(loaded.LowAlertsEnabled);
         Assert.Equal(10, loaded.AlertThresholdPercent);
+        Assert.False(loaded.FloatingAlwaysOnTop);
         Assert.False(json.Contains("token", StringComparison.OrdinalIgnoreCase));
         Assert.False(json.Contains("credential", StringComparison.OrdinalIgnoreCase));
         Assert.False(File.Exists(settingsPath + ".tmp"));

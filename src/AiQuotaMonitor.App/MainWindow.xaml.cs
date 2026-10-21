@@ -22,15 +22,18 @@ public partial class MainWindow : Window
         _viewModel.LowQuotaAlert += _trayServiceAlert;
         _viewModel.SettingsRequested += OpenSettings;
         _viewModel.FloatingPanelRequested += ToggleFloatingPanel;
+        _viewModel.MonitoringPauseChanged += MonitoringPauseChanged;
         _viewModel.ThemeChanged += App.ApplyTheme;
         App.ApplyTheme(_viewModel.Settings.Theme);
 
         _trayService = new SystemTrayService(
             showMainWindow: ShowMainWindow,
             toggleFloatingPanel: ToggleFloatingPanel,
+            toggleMonitoringPause: () => Dispatch(_viewModel.ToggleMonitoringPause),
             refresh: () => Dispatch(() => _ = _viewModel.RefreshAsync(isManual: true)),
             openSettings: () => Dispatch(OpenSettings),
             exit: () => Dispatch(ExitApplication));
+        _trayService.SetMonitoringPaused(_viewModel.IsMonitoringPaused);
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -55,6 +58,7 @@ public partial class MainWindow : Window
         _viewModel.LowQuotaAlert -= _trayServiceAlert;
         _viewModel.SettingsRequested -= OpenSettings;
         _viewModel.FloatingPanelRequested -= ToggleFloatingPanel;
+        _viewModel.MonitoringPauseChanged -= MonitoringPauseChanged;
         _viewModel.ThemeChanged -= App.ApplyTheme;
         _floatingPanel?.Close();
         _trayService.Dispose();
@@ -127,6 +131,8 @@ public partial class MainWindow : Window
     }
 
     private void _trayServiceAlert(QuotaAlert alert) => _trayService.ShowLowQuotaAlert(alert);
+
+    private void MonitoringPauseChanged(bool isPaused) => _trayService.SetMonitoringPaused(isPaused);
 
     private void Dispatch(Action action) => _ = Dispatcher.BeginInvoke(action);
 }
