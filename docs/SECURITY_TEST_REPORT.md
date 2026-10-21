@@ -4,7 +4,8 @@
 
 | Gate | 命令／方法 | 狀態 | 證據 |
 | --- | --- | --- | --- |
-| Release publish token isolation | Build/package uses `contents:read`; isolated artifact-only publisher gets `contents:write`; checkout credential persistence disabled; only v0.1.0 tag already contained in main may proceed | Workflow policy implemented; release workflow NOT RUN | `.github/workflows/release.yml`; verify through release run |
+| Release publish token isolation | Build/package and smoke jobs use `contents:read`; isolated artifact-only publisher gets `contents:write`; checkout credential persistence disabled; only v0.1.1 tag already contained in main may proceed | Workflow policy implemented; new Release workflow NOT RUN | `.github/workflows/release.yml`; verify through release run |
+| Windows final-package startup gate | Offline smoke mode launches exact packaged EXE on `windows-latest`; checks UI ready signal, main window, stability, exception/events, negative startup failure, and unchanged EXE/ZIP SHA-256 | NOT RUN on PR #10 head | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `tests/scripts/Test-WindowsExecutableSmoke.ps1` |
 | Repository policy regression | Ubuntu · `node --test tests/*.test.cjs` | PASS · 32/32 | run 39540874352 governance job |
 | Secret scan | Gitleaks action pinned commit; full history | PASS | run 39540874352 governance job; initial Windows installer 404 was fixed by moving scan to Ubuntu |
 | NuGet vulnerability audit | Restore treats NU1901–NU1904 as errors; `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · no vulnerable packages reported for Core, Providers, App, Tests | run 39540874352 Windows job |

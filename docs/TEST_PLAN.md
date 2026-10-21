@@ -1,5 +1,7 @@
 # TEST_PLAN｜驗證計畫
 
+Issue #9 / PR #10 的下列新 Gate 尚未取得 Windows Actions 結果。舊 SHA `24e31940...` 的驗證只屬於 v0.1.0 歷史，不涵蓋本次修正。
+
 | 領域 | 驗證方法 | 狀態 | 證據 |
 | --- | --- | --- | --- |
 | .NET restore/NuGet audit | Windows runner · `dotnet restore AiQuotaMonitor.sln`; `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS on SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f` | PR run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352): restore and audit passed; no vulnerable packages reported for all four projects |
@@ -12,6 +14,12 @@
 | Monitoring pause | paused scheduled/lifecycle refresh, alert suppression, timer scheduling, manual-refresh allowance and resume behavior | PASS within 55/55 xUnit tests; tray interaction pending UAT | PR run 39540874352; tray interaction in UAT #16 |
 | Secret scan | Gitleaks action pinned commit, full history | PASS on SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f` | PR run 39540874352 governance job |
 | WPF/XAML / WinForms / self-contained publish | Windows Desktop SDK build and v0.1.0 tag publish | Build PASS; publish NOT RUN | Release workflow runs only after reviewed v0.1.0 tag |
+| Issue #9 ProgressValue Binding regression | Windows xUnit parses all app XAML resources and asserts every `ProgressValue` binding is `Mode=OneWay` | NOT RUN on Issue #9 head | `ReadOnlyProgressBindingTests`; pre-fix predicate found two offending usages |
+| Final packaged EXE positive startup | GitHub Windows Runner · visible window/title, UI ready JSON, two cards, four OneWay progress bars, alive for bounded 5 seconds, clean close | NOT RUN | `.github/workflows/ci.yml` and `tests/scripts/Test-WindowsExecutableSmoke.ps1`; no Linux equivalent is claimed |
+| Unhandled exception / Windows crash events | Same Windows packaged EXE · exception marker plus Application Error 1000 / .NET Runtime 1026 query | NOT RUN | smoke evidence JSON and Actions URL will be recorded after Windows run |
+| Offline / no-account / no-token startup | Windows packaged EXE · isolated settings path, common credential environment keys removed, smoke mode skips Provider/CLI calls | NOT RUN | no OAuth Token is read, logged or sent; hosted Runner is not Windows 11 device UAT |
+| Fault-injected negative startup | Same EXE · intentional `XamlParseException` exits nonzero before ready marker; job fails if it is not rejected | NOT RUN | `--smoke-test-force-failure` plus `-VerifyNegativeControl` |
+| Package identity / SHA-256 | Windows · standalone EXE hash equals smoke evidence and ZIP embedded EXE; ZIP hash unchanged during smoke; publisher rechecks manifest | NOT RUN | `Complete-ReleaseArtifacts.ps1` and publisher job |
 | Windows 11 x64 GUI / process UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 device available in current environment |
 | Provider real-client matrix | real Codex CLI/Desktop version and user-configured Claude statusline | NOT VERIFIED | target Windows application versions not established; no CLI/session started |
 

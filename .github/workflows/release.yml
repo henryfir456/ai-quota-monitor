@@ -3,7 +3,7 @@ name: Windows portable prerelease
 on:
   push:
     tags:
-      - 'v0.1.0'
+      - 'v0.1.1'
 
 permissions:
   contents: read
@@ -13,46 +13,65 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  package-windows:
+  build-and-package:
     runs-on: windows-latest
     timeout-minutes: 40
     permissions:
       contents: read
+    outputs:
+      unit_test_summary: ${{ steps.test-summary.outputs.summary }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Verify tag and application version
+      - name: Verify release tag and application version
         shell: pwsh
         run: |
-          if ($env:GITHUB_REF_NAME -ne 'v0.1.0') { throw 'Only the reviewed v0.1.0 tag may publish this prerelease.' }
-          $tagCommit = (git rev-parse $env:GITHUB_SHA).Trim()
+          if ($env:GITHUB_REF_NAME -ne 'v0.1.1') { throw 'Only v0.1.1 may publish this prerelease.' }
+          $tagCommit = (git rev-parse HEAD).Trim()
+          if ($tagCommit -ne $env:GITHUB_SHA) { throw 'Checked out source SHA differs from release tag SHA.' }
           $mainCommit = (git rev-parse refs/remotes/origin/main).Trim()
           git merge-base --is-ancestor $tagCommit $mainCommit
           if ($LASTEXITCODE -ne 0) { throw 'Release tag must point to a commit already contained in origin/main.' }
-          Write-Output "Verified release commit $tagCommit is contained in main at $mainCommit."
+          [xml]$project = Get-Content -LiteralPath 'src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj'
+          if ($project.Project.PropertyGroup.Version -ne '0.1.1') { throw 'Application version and release tag differ.' }
+          Write-Output "Verified release source SHA: $tagCommit"
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 8.0.x
       - name: Restore
         run: dotnet restore AiQuotaMonitor.sln
       - name: Build Release
         run: dotnet build AiQuotaMonitor.sln -c Release --no-restore
       - name: Test Release
         run: dotnet test AiQuotaMonitor.sln -c Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory tests/AiQuotaMonitor.Tests/TestResults
-      - name: PowerShell helper parser and synthetic input
+      - name: Summarize Windows unit tests
+        id: test-summary
+        shell: pwsh
+        run: |
+          [xml]$trx = Get-Content -LiteralPath 'tests/AiQuotaMonitor.Tests/TestResults/tests.trx' -Raw
+          $counters = $trx.SelectSingleNode("//*[local-name()='Counters']")
+          if ($null -eq $counters -or [int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0) { throw 'Windows unit test report is incomplete or contains failures.' }
+          $summary = "total=$($counters.total); passed=$($counters.passed); failed=$($counters.failed); notExecuted=$($counters.notExecuted)"
+          "summary=$summary" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Output $summary
+      - name: Test Claude helper parser and synthetic input
         shell: powershell
         run: ./tests/scripts/Test-ClaudeStatusline.ps1
+      - name: Parse Windows PowerShell scripts
+        shell: powershell
+        run: |
+          $errors = @()
+          Get-ChildItem tests/scripts/*.ps1 -File | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            $errors += $parseErrors
+          }
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; throw 'PowerShell script parser failed.' }
       - name: List dependency audit
         run: dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive
-      - name: Upload Windows test report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: windows-release-test-report
-          path: tests/AiQuotaMonitor.Tests/TestResults/*.trx
-          if-no-files-found: ignore
       - name: Publish self-contained single-file Windows x64 app
         run: >-
           dotnet publish src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj
@@ -63,49 +82,143 @@ jobs:
           -p:PublishTrimmed=false
           -p:DebugType=None -p:DebugSymbols=false
           -o artifacts/publish
-      - name: Prepare portable ZIP, SBOM, checksums, reports
+      - name: Package final Windows executable
         shell: pwsh
+        env:
+          APP_VERSION: 0.1.1
         run: |
-          $version = $env:GITHUB_REF_NAME.Substring(1)
-          $dotnetVersion = dotnet --version
           $dependencyReport = Join-Path $env:RUNNER_TEMP 'AiQuotaMonitor-dependencies.txt'
           $appPackages = dotnet list src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj package --include-transitive
           $testPackages = dotnet list tests/AiQuotaMonitor.Tests/AiQuotaMonitor.Tests.csproj package --include-transitive
           @('PUBLISHED APP DEPENDENCIES', $appPackages, 'BUILD AND TEST DEPENDENCIES', $testPackages) | Set-Content -LiteralPath $dependencyReport -Encoding utf8
           $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
           ./tests/scripts/New-ReleaseArtifacts.ps1 `
-            -Version $version `
+            -Version $env:APP_VERSION `
             -Commit $env:GITHUB_SHA `
-            -DotnetVersion $dotnetVersion `
+            -DotnetVersion (dotnet --version) `
             -PublishDirectory (Join-Path $PWD 'artifacts/publish') `
-            -TestResultsPath (Join-Path $PWD 'tests/AiQuotaMonitor.Tests/TestResults') `
             -DependencyReportPath $dependencyReport `
             -WorkflowRunUrl $workflowUrl `
             -OutputDirectory (Join-Path $PWD 'artifacts/release')
-      - name: Upload release assets for publisher
+      - name: Upload unverified package for Windows smoke gate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: windows-release-assets
+          name: windows-release-package-candidate
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 1
+
+  smoke-and-verify:
+    needs: build-and-package
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Download exact package created by build job
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-release-package-candidate
+          path: artifacts/release
+      - name: Smoke test final packaged EXE and deliberate failure control
+        shell: pwsh
+        env:
+          APP_VERSION: 0.1.1
+        run: |
+          $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          ./tests/scripts/Test-WindowsExecutableSmoke.ps1 `
+            -ExecutablePath "artifacts/release/AiQuotaMonitor-$($env:APP_VERSION)-win-x64.exe" `
+            -PackagePath "artifacts/release/AiQuotaMonitor-$($env:APP_VERSION)-win-x64-portable.zip" `
+            -EvidencePath artifacts/smoke/windows-smoke-evidence.json `
+            -SourceCommit $env:GITHUB_SHA -WorkflowRunUrl $workflowUrl `
+            -StartupTimeoutSeconds 45 -StabilitySeconds 5 -VerifyNegativeControl
+      - name: Verify tested package identity and SHA-256, then prepare release assets
+        shell: pwsh
+        env:
+          APP_VERSION: 0.1.1
+          UNIT_TEST_SUMMARY: ${{ needs.build-and-package.outputs.unit_test_summary }}
+        run: |
+          $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          ./tests/scripts/Complete-ReleaseArtifacts.ps1 `
+            -Version $env:APP_VERSION `
+            -Commit $env:GITHUB_SHA `
+            -UnitTestSummary $env:UNIT_TEST_SUMMARY `
+            -SmokeEvidencePath artifacts/smoke/windows-smoke-evidence.json `
+            -WorkflowRunUrl $workflowUrl `
+            -OutputDirectory artifacts/release
+      - name: Upload Windows verified release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-verified-release-assets
           path: artifacts/release/*
           if-no-files-found: error
           retention-days: 1
 
   publish-prerelease:
-    needs: package-windows
+    needs: smoke-and-verify
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     steps:
-      - name: Download verified Windows release assets
+      - name: Download only smoke-verified Windows release assets
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: windows-release-assets
+          name: windows-verified-release-assets
           path: artifacts/release
-      - name: Create GitHub prerelease
+      - name: Recheck PASS evidence and every SHA-256 before Release
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, sys
+          root = pathlib.Path('artifacts/release')
+          evidence = json.loads((root / 'WINDOWS_SMOKE_EVIDENCE.json').read_text(encoding='utf-8-sig'))
+          if evidence.get('Outcome') != 'PASS':
+              raise SystemExit('Windows smoke result is not PASS.')
+          if evidence.get('SourceCommit') != os.environ['EXPECTED_SHA']:
+              raise SystemExit('Windows smoke evidence source SHA differs from the release tag.')
+          if evidence.get('WorkflowRunUrl') != os.environ['EXPECTED_RUN_URL']:
+              raise SystemExit('Windows smoke evidence does not link the current Actions run.')
+          if evidence.get('PositiveStartup', {}).get('GateResult') != 'PASS':
+              raise SystemExit('Positive GUI startup evidence is missing.')
+          if evidence.get('NegativeControl', {}).get('GateResult') != 'REJECTED_AS_EXPECTED':
+              raise SystemExit('Negative startup-failure control is missing.')
+          lines = (root / 'SHA256SUMS.txt').read_text(encoding='ascii').splitlines()
+          expected = {}
+          for line in lines:
+              match = re.fullmatch(r'([0-9a-f]{64})  ([A-Za-z0-9._-]+)', line)
+              if not match:
+                  raise SystemExit('Malformed SHA256SUMS.txt entry.')
+              expected[match.group(2)] = match.group(1)
+          required = {
+              'AiQuotaMonitor-0.1.1-win-x64.exe',
+              'AiQuotaMonitor-0.1.1-win-x64-portable.zip',
+              'TEST_REPORT.txt',
+              'WINDOWS_SMOKE_EVIDENCE.json',
+          }
+          if not required.issubset(expected):
+              raise SystemExit('Required release assets are missing from SHA256SUMS.txt.')
+          for name, digest in expected.items():
+              actual = hashlib.sha256((root / name).read_bytes()).hexdigest()
+              if actual != digest:
+                  raise SystemExit(f'SHA-256 verification failed for {name}.')
+          exe_hash = expected['AiQuotaMonitor-0.1.1-win-x64.exe']
+          zip_hash = expected['AiQuotaMonitor-0.1.1-win-x64-portable.zip']
+          if exe_hash != evidence.get('ExecutableSha256') or zip_hash != evidence.get('PackageSha256'):
+              raise SystemExit('Release assets differ from the exact EXE/ZIP tested on Windows.')
+          print(f'Windows smoke PASS; verified EXE SHA-256 {exe_hash}; verified ZIP SHA-256 {zip_hash}.')
+          PY
+      - name: Create GitHub prerelease after all Windows gates pass
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          name: AI Quota Monitor ${{ github.ref_name }} (Windows x64)
+          name: AI Quota Monitor v0.1.1 (Windows x64)
           body_path: artifacts/release/RELEASE_NOTES.md
           prerelease: true
           draft: false

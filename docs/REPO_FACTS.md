@@ -22,8 +22,12 @@
 | Token / data paths | No credential file access by Monitor; Codex child receives OS env allowlist; Claude sends two rate-limit windows over current-user pipe | Provider source, security/privacy docs; app-server itself manages Codex auth/network |
 | Local settings | `%LOCALAPPDATA%\AiQuotaMonitor\settings.json` | Schema 1, atomic replace, non-sensitive UI/interval/alert/startup/floating-panel prefs only; pause is session-only |
 | Default refresh / timeout | 300 sec / 10 sec per provider; manual throttle 10 sec | MainViewModel and QuotaRefreshService; timeout/backoff tests passed in 55/55 Windows xUnit suite |
-| Release | tag `v0.1.0`, Windows x64 `PublishSingleFile`, portable ZIP + standalone EXE + SHA256 + SPDX SBOM + reports | `.github/workflows/release.yml`; not yet run |
-| Release state | PR #8; tested code candidate SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f` passed run `39540874352`; release workflow state is on GitHub | User authorized the scoped prerelease after review, CI, policy recheck and merge gates |
+| Current app candidate version | `0.1.1` | `src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj`; not yet released |
+| Original Release | `v0.1.0` Windows x64 prerelease, standalone EXE + portable ZIP + SHA256 + SPDX SBOM + reports | Existing tag/assets remain unchanged; user confirmed startup issue is tracked by Issue #9 |
+| Startup regression | `ProgressBar.Value` targeted readonly `QuotaWindowViewModel.ProgressValue` with default TwoWay binding | `MainWindow.xaml`; PR #10 sets the progress bar and related DataTrigger bindings to OneWay; Windows regression test pending |
+| Windows startup Gate | Final packaged EXE smoke + intentional `XamlParseException` negative control + hash identity verification | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `tests/scripts/Test-WindowsExecutableSmoke.ps1`, `Complete-ReleaseArtifacts.ps1`; new head NOT RUN yet |
+| Target Release | `v0.1.1`, Windows x64 portable ZIP + standalone EXE + SHA256 + SPDX SBOM + report/evidence | `.github/workflows/release.yml`; only after packaged Windows smoke and verification pass |
+| Release authorization | Current user explicitly authorized PR #10/#25 squash merge after gates and `v0.1.1` prerelease if all executable gates pass | One-time authorization in current task; not standing authorization |
 | Windows 11 physical UAT | `HUMAN_TEST_PENDING` | `docs/UAT_WINDOWS11.md`; CI does not substitute |
 | Local environment | Linux; `dotnet` not installed; no Windows GUI/PowerShell 5.1 | Command lookup; no compile/test claim |
 | Current main protection snapshot | Branch payload `protected=false`, required checks `off`/empty; repo rulesets API returned `[]`; branch-protection endpoint returned 403 | Read-only GitHub API snapshot on 2026-10-21; the 403 is recorded separately, not used alone to infer policy |

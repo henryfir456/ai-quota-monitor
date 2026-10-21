@@ -1,4 +1,4 @@
-name: Windows CI
+name: Windows CI and packaged startup gate
 
 on:
   pull_request:
@@ -41,9 +41,11 @@ jobs:
       - name: Run repository governance tests
         run: node --test tests/*.test.cjs
 
-  build-and-test:
+  build-package-and-smoke:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -67,15 +69,91 @@ jobs:
         run: dotnet build AiQuotaMonitor.sln -c Release --no-restore
       - name: Test Release
         run: dotnet test AiQuotaMonitor.sln -c Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory tests/AiQuotaMonitor.Tests/TestResults
+      - name: Summarize Windows unit tests
+        id: test-summary
+        shell: pwsh
+        run: |
+          [xml]$trx = Get-Content -LiteralPath 'tests/AiQuotaMonitor.Tests/TestResults/tests.trx' -Raw
+          $counters = $trx.SelectSingleNode("//*[local-name()='Counters']")
+          if ($null -eq $counters -or [int]$counters.failed -ne 0 -or [int]$counters.notExecuted -ne 0) { throw 'Windows unit test report is incomplete or contains failures.' }
+          $summary = "total=$($counters.total); passed=$($counters.passed); failed=$($counters.failed); notExecuted=$($counters.notExecuted)"
+          "summary=$summary" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Output $summary
       - name: Test Claude helper parser and synthetic data
         shell: powershell
         run: ./tests/scripts/Test-ClaudeStatusline.ps1
+      - name: Parse Windows PowerShell scripts
+        shell: powershell
+        run: |
+          $errors = @()
+          Get-ChildItem tests/scripts/*.ps1 -File | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            $errors += $parseErrors
+          }
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; throw 'PowerShell script parser failed.' }
       - name: List dependency audit
         run: dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive
-      - name: Upload test report
-        if: always()
+      - name: Publish self-contained single-file Windows x64 app
+        run: >-
+          dotnet publish src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:PublishTrimmed=false
+          -p:DebugType=None -p:DebugSymbols=false
+          -o artifacts/publish
+      - name: Prepare dependency report and package final executable
+        id: package
+        shell: pwsh
+        env:
+          APP_VERSION: 0.1.1
+        run: |
+          $dependencyReport = Join-Path $env:RUNNER_TEMP 'AiQuotaMonitor-dependencies.txt'
+          $appPackages = dotnet list src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj package --include-transitive
+          $testPackages = dotnet list tests/AiQuotaMonitor.Tests/AiQuotaMonitor.Tests.csproj package --include-transitive
+          @('PUBLISHED APP DEPENDENCIES', $appPackages, 'BUILD AND TEST DEPENDENCIES', $testPackages) | Set-Content -LiteralPath $dependencyReport -Encoding utf8
+          $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          ./tests/scripts/New-ReleaseArtifacts.ps1 `
+            -Version $env:APP_VERSION `
+            -Commit $env:SOURCE_SHA `
+            -DotnetVersion (dotnet --version) `
+            -PublishDirectory (Join-Path $PWD 'artifacts/publish') `
+            -DependencyReportPath $dependencyReport `
+            -WorkflowRunUrl $workflowUrl `
+            -OutputDirectory (Join-Path $PWD 'artifacts/release')
+      - name: Smoke test exact package and verify negative control
+        shell: pwsh
+        env:
+          APP_VERSION: 0.1.1
+        run: |
+          $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          ./tests/scripts/Test-WindowsExecutableSmoke.ps1 `
+            -ExecutablePath "artifacts/release/AiQuotaMonitor-$($env:APP_VERSION)-win-x64.exe" `
+            -PackagePath "artifacts/release/AiQuotaMonitor-$($env:APP_VERSION)-win-x64-portable.zip" `
+            -EvidencePath artifacts/smoke/windows-smoke-evidence.json `
+            -SourceCommit $env:SOURCE_SHA -WorkflowRunUrl $workflowUrl `
+            -StartupTimeoutSeconds 45 -StabilitySeconds 5 -VerifyNegativeControl
+      - name: Verify package identity and finalize SHA-256 manifest
+        shell: pwsh
+        env:
+          APP_VERSION: 0.1.1
+          UNIT_TEST_SUMMARY: ${{ steps.test-summary.outputs.summary }}
+        run: |
+          $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          ./tests/scripts/Complete-ReleaseArtifacts.ps1 `
+            -Version $env:APP_VERSION `
+            -Commit $env:SOURCE_SHA `
+            -UnitTestSummary $env:UNIT_TEST_SUMMARY `
+            -SmokeEvidencePath artifacts/smoke/windows-smoke-evidence.json `
+            -WorkflowRunUrl $workflowUrl `
+            -OutputDirectory artifacts/release
+      - name: Upload verified PR candidate report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: windows-test-report
-          path: tests/AiQuotaMonitor.Tests/TestResults/*.trx
-          if-no-files-found: ignore
+          name: windows-packaged-smoke-evidence
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 14

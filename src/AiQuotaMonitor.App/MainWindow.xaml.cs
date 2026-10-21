@@ -1,5 +1,12 @@
 using System.ComponentModel;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Threading;
 using AiQuotaMonitor.App.Services;
 using AiQuotaMonitor.App.ViewModels;
 
@@ -10,14 +17,18 @@ public partial class MainWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly SystemTrayService _trayService;
     private readonly bool _startMinimized;
+    private readonly bool _smokeTest;
+    private readonly string? _smokeReadyFile;
     private FloatingPanelWindow? _floatingPanel;
     private bool _allowExit;
 
-    public MainWindow(bool startMinimized = false)
+    public MainWindow(bool startMinimized = false, bool smokeTest = false, string? smokeReadyFile = null, string? smokeSettingsPath = null)
     {
         InitializeComponent();
         _startMinimized = startMinimized;
-        _viewModel = new MainViewModel();
+        _smokeTest = smokeTest;
+        _smokeReadyFile = smokeReadyFile;
+        _viewModel = new MainViewModel(smokeSettingsPath is null ? null : new SettingsStore(smokeSettingsPath));
         DataContext = _viewModel;
         _viewModel.LowQuotaAlert += _trayServiceAlert;
         _viewModel.SettingsRequested += OpenSettings;
@@ -45,12 +56,18 @@ public partial class MainWindow : Window
             HideMainWindow();
         }
 
+        if (_smokeTest)
+        {
+            await Dispatcher.InvokeAsync(WriteSmokeReadiness, DispatcherPriority.ApplicationIdle);
+            return;
+        }
+
         await _viewModel.StartAsync();
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        if (!_allowExit)
+        if (!_allowExit && !_smokeTest)
         {
             e.Cancel = true;
             HideMainWindow();
@@ -65,6 +82,10 @@ public partial class MainWindow : Window
         _floatingPanel?.Close();
         _trayService.Dispose();
         _viewModel.Dispose();
+        if (_smokeTest)
+        {
+            System.Windows.Application.Current.Shutdown();
+        }
     }
 
     private void ShowMainWindow()
@@ -155,4 +176,60 @@ public partial class MainWindow : Window
     private void MonitoringPauseChanged(bool isPaused) => _trayService.SetMonitoringPaused(isPaused);
 
     private void Dispatch(Action action) => _ = Dispatcher.BeginInvoke(action);
+
+    private void WriteSmokeReadiness()
+    {
+        UpdateLayout();
+        var controls = EnumerateVisualChildren(this).ToArray();
+        var progressBars = controls.OfType<ProgressBar>().ToArray();
+        var bindingModes = progressBars
+            .Select(progressBar => BindingOperations.GetBinding(progressBar, RangeBase.ValueProperty)?.Mode.ToString())
+            .ToArray();
+        var providerNames = controls.OfType<TextBlock>()
+            .Select(textBlock => textBlock.Text)
+            .Where(text => text is "Claude Code" or "Codex")
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(text => text, StringComparer.Ordinal)
+            .ToArray();
+
+        if (string.IsNullOrWhiteSpace(_smokeReadyFile) ||
+            !IsVisible ||
+            Title != "AI 額度監控器" ||
+            providerNames.Length != 2 ||
+            progressBars.Length != 4 ||
+            bindingModes.Any(mode => mode != BindingMode.OneWay.ToString()))
+        {
+            throw new InvalidOperationException("Smoke UI did not initialize the expected provider cards and read-only quota progress bindings.");
+        }
+
+        var readiness = JsonSerializer.Serialize(new
+        {
+            Ready = true,
+            ProcessId = Environment.ProcessId,
+            WindowTitle = Title,
+            MainWindowVisible = IsVisible,
+            ProviderCardCount = providerNames.Length,
+            ProviderNames = providerNames,
+            QuotaProgressBarCount = progressBars.Length,
+            ProgressValueBindingModes = bindingModes,
+            CheckedAtUtc = DateTimeOffset.UtcNow
+        });
+        var temporaryPath = _smokeReadyFile + ".tmp";
+        File.WriteAllText(temporaryPath, readiness);
+        File.Move(temporaryPath, _smokeReadyFile, overwrite: true);
+    }
+
+    private static IEnumerable<DependencyObject> EnumerateVisualChildren(DependencyObject parent)
+    {
+        var childCount = VisualTreeHelper.GetChildrenCount(parent);
+        for (var index = 0; index < childCount; index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            yield return child;
+            foreach (var descendant in EnumerateVisualChildren(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
 }

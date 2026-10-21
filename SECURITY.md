@@ -18,4 +18,4 @@
 
 ## 發行限制
 
-v0.1.0 是 prerelease，未簽章，Windows 11 實機 UAT 項目仍可能標為 `HUMAN_TEST_PENDING`。自動測試、SHA-256、Linux 靜態檢查均不等同於實機安全審查、簽章或 Defender/SmartScreen 認證。
+v0.1.0 原 prerelease 保持不變；v0.1.1 修正版只會在最終 Windows packaged EXE 的 GUI startup smoke、故障反向控制和 SHA-256 同一性驗證全數通過後發布。版本未簽章，Windows 11 實機 UAT 項目仍可能標為 `HUMAN_TEST_PENDING`。自動測試、SHA-256、Linux 靜態檢查均不等同於 Windows 11 實機驗收、簽章或發行者身分驗證。

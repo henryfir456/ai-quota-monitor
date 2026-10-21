@@ -1,6 +1,6 @@
 # 隱私說明
 
-最後更新：2026-10-21。AI Quota Monitor v0.1.0 是本機 Windows 桌面程式，沒有自有後端、分析 SDK、廣告、遙測或自動更新。
+最後更新：2026-10-21。AI Quota Monitor v0.1.x 是本機 Windows 桌面程式，沒有自有後端、分析 SDK、廣告、遙測或自動更新。
 
 ## 處理的資料
 
@@ -14,6 +14,7 @@
 - Claude helper 不建立網路連線。Monitor 自身不發送遙測或帳號資料。
 - Codex 額度查詢由 Codex app-server 依其既有產品實作執行；其底層網路路徑不是本程式定義的 API。Monitor 不另行連線 OpenAI／Anthropic 網站，也不把資料傳給專案維護者。
 - GitHub Actions 僅在程式碼驗證時接收原始碼、合成測試 fixture 和測試結果；不執行使用者安裝的 Claude/Codex CLI，不含使用者 quota、帳號或 Token。
+- Windows 發行 smoke mode 使用 runner 暫存資料夾的空白設定路徑，移除常見 Claude／Codex API key 環境變數，略過 Provider refresh／CLI 啟動；只輸出程式 PID、預期 UI 控制項數、視窗標題、例外型別及測試成品雜湊。測試不輸出例外訊息、帳號或額度欄位。
 
 ## 使用者控制
 

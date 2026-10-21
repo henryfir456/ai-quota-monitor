@@ -1,5 +1,9 @@
 # 測試報告
 
+## Issue #9 / PR #10 修正驗證狀態
+
+截至目前，`ProgressValue` XAML Binding regression predicate 已在修正前的 XAML 上重現 FAIL，相關 Binding 已改為 OneWay；**本次 PR head 的 Windows build、xUnit、最終 portable EXE smoke、故障反向案例和 hash 驗證尚未執行**。下方舊 PR run 不代表本次修正通過，也不授權建立 v0.1.1 Release。工作目錄沒有 .NET SDK／Windows GUI；必要的執行證據必須來自 GitHub `windows-latest`。
+
 更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 
 ## 自動驗證
@@ -13,7 +17,7 @@
 | xUnit | Windows · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55 passed / 0 failed | run 39540874352; TRX artifact `windows-test-report` |
 | Claude PowerShell helper | Windows PowerShell 5.1 parser and synthetic input | PASS | `Test-ClaudeStatusline.ps1` step in run 39540874352 |
 | NuGet vulnerability audit | Windows · `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · all four projects reported no vulnerable packages | run 39540874352 `List dependency audit` step |
-| Windows x64 publish / release assets | `v0.1.0` release workflow | NOT RUN | awaits reviewed PR merge and authorized prerelease tag |
+| Windows x64 publish / release assets | `v0.1.1` release workflow | NOT RUN | awaits same-head PR gates, review, merge, then Windows smoke/hash workflow |
 | Windows 11 device UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 physical device was available |
 
 This run includes the isolated PowerShell JSON probe's terminating-error handling. The report records the tested source SHA; check PR #8 Checks for any later documentation-only head validation.

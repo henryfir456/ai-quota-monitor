@@ -98,12 +98,12 @@
                                                             <TextBlock Text="{Binding Label}" Foreground="{DynamicResource SecondaryForeground}" />
                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding PercentageText}" FontSize="20" FontWeight="SemiBold" />
                                                         </DockPanel>
-                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Foreground="{Binding ProgressBrush}" Height="8" Margin="0,8,0,5" AutomationProperties.Name="額度百分比">
+                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" Foreground="{Binding ProgressBrush}" Height="8" Margin="0,8,0,5" AutomationProperties.Name="額度百分比">
                                                     <ProgressBar.Style>
                                                         <Style TargetType="ProgressBar">
                                                             <Setter Property="Visibility" Value="Visible" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ProgressValue}" Value="{x:Null}">
+                                                                <DataTrigger Binding="{Binding ProgressValue, Mode=OneWay}" Value="{x:Null}">
                                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
