@@ -8,11 +8,11 @@
 | --- | --- | --- | --- |
 | 靜態專案／fixture 格式 | Linux · Python 3 XML/YAML/JSON parse | PASS | 12 XML、2 workflow YAML、6 test JSON 可解析；不代表 C# compile |
 | Repository config test | Linux · `node --test tests/agent-loop-config.test.cjs` | PASS | 1 suite passed；不涵蓋需要巢狀 Node process 的其他 suites |
-| Repository governance tests | Ubuntu runner · `node --test tests/*.test.cjs` | PASS on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; local sandbox BLOCKED | PR run 39537932515 governance job passed. Local command exits 1 because sandbox denies nested Node subprocesses with `EPERM` |
-| Gitleaks | Ubuntu GitHub Actions，full history | PASS on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0` | PR run 39537932515 governance job passed; earlier Windows installer 404 was avoided by moving scan to Ubuntu |
-| Restore | Windows runner · `dotnet restore AiQuotaMonitor.sln` | PASS on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0` | PR run 39537932515 `build-and-test` job |
-| Release build | Windows runner · `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | FAIL on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; corrected in next commit, final head pending | PR run 39537932515 failed because tests lacked explicit `System.IO` global using; previous SHA `7645556...` had a separate CS9007 raw-string failure, also fixed |
-| Unit tests / PowerShell helper / NuGet vulnerability audit | Windows runner · `dotnet test`, `Test-ClaudeStatusline.ps1`, `dotnet list ... --vulnerable --include-transitive` | SKIPPED on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; final head pending | Build failure prevented later steps; no test or audit result is inferred |
+| Repository governance tests | Ubuntu runner · `node --test tests/*.test.cjs` | PASS on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d`; local sandbox BLOCKED | PR run 39538202866 governance job passed. Local command exits 1 because sandbox denies nested Node subprocesses with `EPERM` |
+| Gitleaks | Ubuntu GitHub Actions，full history | PASS on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d` | PR run 39538202866 governance job passed; earlier Windows installer 404 was avoided by moving scan to Ubuntu |
+| Restore / Release build | Windows runner · `dotnet restore AiQuotaMonitor.sln`; `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d` | PR run 39538202866 `build-and-test` job |
+| Unit tests | Windows runner · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | FAIL on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d` (52 passed / 1 failed); test harness corrected, final head pending | PR run 39538202866 timed out the Claude bridge helper process after 15 seconds; its test environment lacked PowerShell-specific variables. Timeout now kills child and captures sanitized diagnostics |
+| PowerShell helper / NuGet vulnerability audit | Windows runner · `Test-ClaudeStatusline.ps1`; `dotnet list ... --vulnerable --include-transitive` | SKIPPED on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d`; final head pending | xUnit failure stopped later steps; no helper parser or audit result is inferred |
 | Windows x64 self-contained publish | Release tag workflow | NOT RUN | prerelease workflow 待執行 |
 
 ## 本機環境限制

@@ -2,12 +2,19 @@ using System.Diagnostics;
 using System.Text;
 using AiQuotaMonitor.Core;
 using AiQuotaMonitor.Providers.Claude;
-using AiQuotaMonitor.Providers.Codex;
 
 namespace AiQuotaMonitor.Tests;
 
 public sealed class ClaudeStatuslineBridgeTests
 {
+    private static readonly string[] PowerShellEnvironmentNames =
+    [
+        "PATH", "SYSTEMROOT", "WINDIR", "USERPROFILE", "HOMEDRIVE", "HOMEPATH",
+        "LOCALAPPDATA", "APPDATA", "TEMP", "TMP", "COMSPEC",
+        "PATHEXT", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432",
+        "CommonProgramFiles", "CommonProgramFiles(x86)"
+    ];
+
     [Fact]
     public async Task PowerShellHelperSendsOnlyQuotaFieldsOverCurrentUserPipe()
     {
@@ -65,13 +72,20 @@ public sealed class ClaudeStatuslineBridgeTests
             StandardErrorEncoding = new UTF8Encoding(false)
         };
         startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-NonInteractive");
         startInfo.ArgumentList.Add("-File");
         startInfo.ArgumentList.Add(helperPath);
         startInfo.Environment.Clear();
-        foreach (var variable in CodexProcessEnvironment.ReadCurrent())
+        foreach (var name in PowerShellEnvironmentNames)
         {
-            startInfo.Environment[variable.Key] = variable.Value;
+            var value = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                startInfo.Environment[name] = value;
+            }
         }
+
+        startInfo.Environment["PSModulePath"] = Path.Combine(Path.GetDirectoryName(powershellPath)!, "Modules");
 
         using var process = new Process { StartInfo = startInfo };
         Assert.True(process.Start());
@@ -79,7 +93,33 @@ public sealed class ClaudeStatuslineBridgeTests
         var errorTask = process.StandardError.ReadToEndAsync();
         await process.StandardInput.WriteAsync(input);
         process.StandardInput.Close();
-        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15));
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15));
+        }
+        catch (TimeoutException exception)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
+            await process.WaitForExitAsync();
+            var output = await outputTask;
+            var error = await errorTask;
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrWhiteSpace(userProfile))
+            {
+                output = output.Replace(userProfile, "<user-profile>", StringComparison.OrdinalIgnoreCase);
+                error = error.Replace(userProfile, "<user-profile>", StringComparison.OrdinalIgnoreCase);
+            }
+
+            throw new TimeoutException($"PowerShell helper timed out. stdout: {output}; stderr: {error}", exception);
+        }
+
         return (process.ExitCode, await outputTask, await errorTask);
     }
 
