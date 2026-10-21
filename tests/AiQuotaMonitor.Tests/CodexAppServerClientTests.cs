@@ -44,7 +44,8 @@ public sealed class CodexAppServerClientTests
         Assert.Equal(3, sentRequests.Length);
         Assert.Contains("\"method\":\"account/read\"", sentRequests[2], StringComparison.Ordinal);
         Assert.DoesNotContain("account/rateLimits/read", writer.ToString(), StringComparison.Ordinal);
-        Assert.DoesNotContain("Token", exception.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Codex account is not authenticated.", exception.Message);
+        Assert.DoesNotContain("synthetic", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

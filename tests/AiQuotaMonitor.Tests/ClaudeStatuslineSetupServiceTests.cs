@@ -207,6 +207,29 @@ public sealed class ClaudeStatuslineSetupServiceTests : IDisposable
     }
 
     [Fact]
+    public void UnreadableJournalAfterSetupIsReportedWithoutChangingInstalledSettings()
+    {
+        var service = CreateService(claudeInstalled: true);
+        var settingsPath = Path.Combine(_userProfile, ".claude", "settings.json");
+        var journalPath = Path.Combine(_localAppData, "AiQuotaMonitor", "claude-statusline-setup.json");
+        Assert.Equal("configured", service.Configure().ResultCode);
+        var installedSettings = File.ReadAllBytes(settingsPath);
+        File.WriteAllText(journalPath, "{ malformed");
+
+        var state = service.Inspect();
+        var configureResult = service.Configure();
+        var rollbackResult = service.Rollback();
+
+        Assert.Equal("setup_journal_unreadable", state.ErrorCode);
+        Assert.False(state.CanRollback);
+        Assert.True(state.HasExistingStatusline);
+        Assert.Equal("setup_journal_unreadable", configureResult.ResultCode);
+        Assert.Equal("setup_journal_unreadable", rollbackResult.ResultCode);
+        Assert.Equal(installedSettings, File.ReadAllBytes(settingsPath));
+        Assert.Equal("{ malformed", File.ReadAllText(journalPath));
+    }
+
+    [Fact]
     public void RollbackRefusesToOverwriteAStatuslineChangedByTheUser()
     {
         var service = CreateService();

@@ -91,6 +91,11 @@ public sealed class ClaudeStatuslineSetupService
 
             if (MatchesInstalledStatusLine(statusLine, CreateCommand()))
             {
+                if (JournalPathExists())
+                {
+                    return new("setup_journal_unreadable", "檢查 Claude 設定記錄", false, true);
+                }
+
                 var code = ClaudeExecutableLocator.Find(_pathVariable, _localApplicationData, _appData, _fileExists, _userProfile) is null
                     ? "claude_cli_not_found"
                     : InspectInstalledHelperErrorCode() ?? "statusline_waiting_for_data";
@@ -150,6 +155,11 @@ public sealed class ClaudeStatuslineSetupService
                 MatchesInstalledStatusLine(settings["statusLine"], journal.InstalledCommand))
             {
                 return new("already_configured", "Claude 額度來源已由 Monitor 設定；Claude Code 下一次傳送支援的 rate_limits 欄位後，主畫面會更新。");
+            }
+
+            if (MatchesInstalledStatusLine(settings["statusLine"], CreateCommand()) && JournalPathExists())
+            {
+                return new("setup_journal_unreadable", "Claude 額度設定記錄無法安全讀取；為避免覆寫，Monitor 未修改設定。");
             }
 
             return new("existing_statusline_conflict", "偵測到既有 Claude statusLine 設定。為保留你的自訂指令，Monitor 未修改 settings.json。請自行整合 helper，或先備份並調整原設定後再試。");

@@ -139,6 +139,18 @@ public sealed class ClaudeStatuslineBridgeTests
         Assert.Null(fiveHourWithInvalidReset.ResetAtUtc);
         Assert.All(resetSnapshot.Windows, window => Assert.DoesNotContain("PRIVATE_SYNTHETIC", window.ErrorCode ?? string.Empty, StringComparison.Ordinal));
 
+        var nullWindowResult = await RunPowerShellAsync(["-File", helperPath],
+            "{\"rate_limits\":{\"five_hour\":null,\"seven_day\":{\"used_percentage\":41.2}},\"session_id\":\"PRIVATE_SYNTHETIC_SESSION\"}");
+        Assert.Equal(0, nullWindowResult.ExitCode);
+        Assert.DoesNotContain("PRIVATE_SYNTHETIC_SESSION", nullWindowResult.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_SYNTHETIC_SESSION", nullWindowResult.Error, StringComparison.Ordinal);
+        var nullWindowSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        var unsupportedFiveHour = nullWindowSnapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        Assert.Equal(QuotaStatus.Unsupported, unsupportedFiveHour.Status);
+        Assert.Equal("unsupported_statusline_data", unsupportedFiveHour.ErrorCode);
+        Assert.Null(unsupportedFiveHour.RemainingPercent);
+        Assert.Equal(58.8d, nullWindowSnapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
+
         cancellation.Cancel();
         await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
     }

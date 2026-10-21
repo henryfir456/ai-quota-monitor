@@ -55,12 +55,14 @@ try {
         @{ Source = 'five_hour'; Target = 'five_hour'; Label = '5h' },
         @{ Source = 'seven_day'; Target = 'seven_day'; Label = '7d' }
     )) {
-        $sourceWindow = $null
-        if ($null -ne $inputData.rate_limits) {
-            $sourceWindow = $inputData.rate_limits.($mapping.Source)
+        if ($null -eq $inputData.rate_limits) { continue }
+        $sourceProperty = $inputData.rate_limits.PSObject.Properties[$mapping.Source]
+        if ($null -eq $sourceProperty) { continue }
+        $sourceWindow = $sourceProperty.Value
+        if ($null -eq $sourceWindow) {
+            $windows[$mapping.Target] = '__invalid_window_shape__'
+            continue
         }
-
-        if ($null -eq $sourceWindow) { continue }
         if ($sourceWindow -isnot [System.Management.Automation.PSCustomObject]) {
             $windows[$mapping.Target] = '__invalid_window_shape__'
             continue
