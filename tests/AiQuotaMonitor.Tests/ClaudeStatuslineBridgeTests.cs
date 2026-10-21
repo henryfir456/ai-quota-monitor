@@ -84,6 +84,17 @@ public sealed class ClaudeStatuslineBridgeTests
         Assert.All(clearedSnapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
         Assert.All(clearedSnapshot.Windows, window => Assert.Null(window.RemainingPercent));
 
+        const string privateMalformedInput = "private malformed synthetic input";
+        var malformed = await RunPowerShellAsync(["-File", helperPath], privateMalformedInput);
+        Assert.Equal(0, malformed.ExitCode);
+        Assert.Contains("N/A", malformed.Output);
+        Assert.DoesNotContain(privateMalformedInput, malformed.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain(privateMalformedInput, malformed.Error, StringComparison.Ordinal);
+        var parseFailure = await provider.GetSnapshotAsync(CancellationToken.None);
+        Assert.All(parseFailure.Windows, window => Assert.Equal(QuotaStatus.Error, window.Status));
+        Assert.All(parseFailure.Windows, window => Assert.Equal("parse_failure", window.ErrorCode));
+        Assert.All(parseFailure.Windows, window => Assert.Null(window.RemainingPercent));
+
         cancellation.Cancel();
         await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
     }

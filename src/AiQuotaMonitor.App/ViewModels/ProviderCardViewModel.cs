@@ -2,15 +2,18 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using AiQuotaMonitor.Core;
+using AiQuotaMonitor.App.Services;
 
 namespace AiQuotaMonitor.App.ViewModels;
 
 public sealed class ProviderCardViewModel : INotifyPropertyChanged
 {
+    private static readonly TimeZoneInfo TaipeiTimeZone = FindTaipeiTimeZone();
     private readonly Dictionary<WindowId, QuotaWindowViewModel> _windowsById;
-    private string _sourceText = "來源：未取得";
-    private string _statusText = "UNKNOWN";
-    private string _lastUpdatedText = "最後更新：N/A";
+    private string _sourceText;
+    private string _statusText = "資料待確認";
+    private string _lastUpdatedText = "最後成功：N/A";
+    private string _diagnosticText = "原因：尚未收到額度來源結果。建議：等待首次唯讀刷新完成。";
 
     public ProviderCardViewModel(ProviderId providerId)
     {
@@ -22,12 +25,16 @@ public sealed class ProviderCardViewModel : INotifyPropertyChanged
             _ => providerId.ToString()
         };
         var now = DateTimeOffset.UtcNow;
+        var errorCode = providerId == ProviderId.Claude ? "statusline_not_configured" : "provider_not_checked";
         Windows = new ObservableCollection<QuotaWindowViewModel>
         {
-            new(new QuotaObservation(providerId, WindowId.FiveHour, null, null, now, "未取得", QuotaStatus.Unknown)),
-            new(new QuotaObservation(providerId, WindowId.Weekly, null, null, now, "未取得", QuotaStatus.Unknown))
+            new(new QuotaObservation(providerId, WindowId.FiveHour, null, null, now, SourceName(providerId), QuotaStatus.Unknown, errorCode)),
+            new(new QuotaObservation(providerId, WindowId.Weekly, null, null, now, SourceName(providerId), QuotaStatus.Unknown, errorCode))
         };
         _windowsById = Windows.ToDictionary(window => window.WindowId);
+        _sourceText = $"資料來源：{SourceName(providerId)}";
+        DiagnosticText = string.Join(Environment.NewLine, Windows
+            .Select(window => $"{window.Label}：{window.DiagnosticText}"));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -35,6 +42,8 @@ public sealed class ProviderCardViewModel : INotifyPropertyChanged
     public ProviderId ProviderId { get; }
 
     public string Name { get; }
+
+    public bool IsClaude => ProviderId == ProviderId.Claude;
 
     public ObservableCollection<QuotaWindowViewModel> Windows { get; }
 
@@ -50,10 +59,16 @@ public sealed class ProviderCardViewModel : INotifyPropertyChanged
         private set => SetField(ref _statusText, value);
     }
 
-    public string LastUpdatedText
+    public string LastSuccessfulUpdateText
     {
         get => _lastUpdatedText;
         private set => SetField(ref _lastUpdatedText, value);
+    }
+
+    public string DiagnosticText
+    {
+        get => _diagnosticText;
+        private set => SetField(ref _diagnosticText, value);
     }
 
     public void Apply(ProviderSnapshot snapshot, bool showUsedPercent)
@@ -72,21 +87,44 @@ public sealed class ProviderCardViewModel : INotifyPropertyChanged
             }
         }
 
-        var first = snapshot.Windows.FirstOrDefault();
-        SourceText = first is null ? "來源：未取得" : $"來源：{first.Source}";
-        var lastUpdated = snapshot.Windows.MaxBy(window => window.ObservedAtUtc)?.ObservedAtUtc;
-        LastUpdatedText = lastUpdated is DateTimeOffset observed
-            ? $"最後更新：{observed.ToLocalTime():yyyy/MM/dd HH:mm:ss}"
-            : "最後更新：N/A";
-        StatusText = snapshot.Windows.Any(window => window.Status == QuotaStatus.Error)
-            ? "資料失敗"
-            : snapshot.Windows.Any(window => window.Status == QuotaStatus.Stale)
-                ? "資料已過期"
-            : snapshot.Windows.Any(window => window.Status == QuotaStatus.Fresh)
-                ? "資料最新"
-                : snapshot.Windows.Any(window => window.Status == QuotaStatus.Unsupported)
-                    ? "未支援"
-                    : "UNKNOWN";
+        SourceText = $"資料來源：{SourceName(ProviderId)}";
+        var lastUpdated = Windows.Select(window => window.LastSuccessfulUpdateAtUtc)
+            .Where(updated => updated is not null)
+            .Max();
+        LastSuccessfulUpdateText = lastUpdated is DateTimeOffset observed
+            ? $"最後成功：{TimeZoneInfo.ConvertTime(observed, TaipeiTimeZone):yyyy/MM/dd HH:mm:ss} Asia/Taipei"
+            : "最後成功：N/A";
+        DiagnosticText = string.Join(Environment.NewLine, Windows
+            .Select(window => $"{window.Label}：{window.DiagnosticText}")
+            .Distinct(StringComparer.Ordinal));
+        var freshWindows = snapshot.Windows.Count(window =>
+            window.Status == QuotaStatus.Fresh && window.RemainingPercent is not null);
+        StatusText = freshWindows == _windowsById.Count
+            ? "資料最新"
+            : freshWindows > 0
+                ? "部分額度可用"
+                : Windows.Select(window => window.StatusText).Distinct(StringComparer.Ordinal).Take(2).Count() == 1
+                    ? Windows[0].StatusText
+                    : "部分來源異常";
+    }
+
+    private static string SourceName(ProviderId providerId) => providerId switch
+    {
+        ProviderId.Claude => "Claude Code 官方 statusline JSON（本機命令）",
+        ProviderId.Codex => "Codex 官方 App Server account/rateLimits/read",
+        _ => "未知來源"
+    };
+
+    private static TimeZoneInfo FindTaipeiTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Taipei Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei");
+        }
     }
 
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

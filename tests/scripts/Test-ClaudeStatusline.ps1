@@ -28,3 +28,11 @@ if ($LASTEXITCODE -ne 0 -or ($output -join "`n") -notmatch '5h 76\.5%.*7d 58\.8%
 if ($output -match 'SYNTHETIC_SESSION_ONLY|SYNTHETIC_PATH_ONLY') {
     throw 'Claude statusline helper leaked a synthetic session field.'
 }
+
+$malformedOutput = '{ malformed private-input }' | & $powerShell -NoProfile -File $helperPath
+if ($LASTEXITCODE -ne 0 -or ($malformedOutput -join "`n") -notmatch 'N/A') {
+    throw 'Claude statusline helper did not fail safely for invalid JSON.'
+}
+if ($malformedOutput -match 'malformed private-input') {
+    throw 'Claude statusline helper exposed invalid input in its output.'
+}

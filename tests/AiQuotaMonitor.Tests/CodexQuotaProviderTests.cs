@@ -21,6 +21,63 @@ public sealed class CodexQuotaProviderTests
 
         Assert.False(readAttempted);
         Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("codex_cli_not_found", window.ErrorCode));
+        Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
+    }
+
+    [Fact]
+    public async Task NotLoggedInIsDistinctFromAnUnavailableAccountService()
+    {
+        var provider = new CodexQuotaProvider(
+            findExecutable: () => "synthetic-codex-path",
+            readRateLimits: (_, _) => throw new CodexNotLoggedInException());
+
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("codex_not_logged_in", window.ErrorCode));
+        Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
+    }
+
+    [Fact]
+    public async Task TimeoutIsReportedWithoutTurningItIntoAQuotaValue()
+    {
+        var provider = new CodexQuotaProvider(
+            findExecutable: () => "synthetic-codex-path",
+            readRateLimits: (_, _) => throw new TimeoutException("synthetic timeout details"));
+
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Error, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("timeout", window.ErrorCode));
+        Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
+    }
+
+    [Fact]
+    public async Task InvalidRpcJsonIsReportedAsParseFailure()
+    {
+        var provider = new CodexQuotaProvider(
+            findExecutable: () => "synthetic-codex-path",
+            readRateLimits: (_, _) => Task.FromResult("not-json"));
+
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Error, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("parse_failure", window.ErrorCode));
+        Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
+    }
+
+    [Fact]
+    public async Task ClosedAppServerIsReportedAsUnreachable()
+    {
+        var provider = new CodexQuotaProvider(
+            findExecutable: () => "synthetic-codex-path",
+            readRateLimits: (_, _) => throw new EndOfStreamException("synthetic server text"));
+
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Error, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("app_server_unreachable", window.ErrorCode));
         Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
     }
 
@@ -47,7 +104,7 @@ public sealed class CodexQuotaProviderTests
 
         Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
         Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
-        Assert.All(snapshot.Windows, window => Assert.Equal("account_unavailable", window.ErrorCode));
+        Assert.All(snapshot.Windows, window => Assert.Equal("codex_account_unavailable", window.ErrorCode));
     }
 
     [Fact]

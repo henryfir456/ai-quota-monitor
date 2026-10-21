@@ -22,6 +22,15 @@
 
 Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <packaged EXE> -PackagePath <portable ZIP> -VerifyNegativeControl`；run 39554220174 使用同一個 Windows build/package artifact 執行正向與負向 Gate、再核對 EXE/ZIP SHA。Evidence 只包含 runner、source SHA、UI 結果、例外型別與檔案 hash，不含帳號、Token 或額度資料。
 
+## Issue #11 / v0.1.2 額度來源修正
+
+目前工作分支新增 synthetic tests：Claude official statusline helper 設定、備份、衝突、復原、解析錯誤和 15 分鐘無輸入逾時；Codex app-server capability、`account/read refreshToken=false`、已登入／未登入與 rate-limit response；兩者皆含 missing install、parse failure、timeout、不支援、失敗後保留成功時間及 UI 診斷更新測試。
+
+- 本地驗證：`dotnet` 與 `pwsh` 未安裝；C# build/xUnit 和 Windows PowerShell 測試均 `NOT RUN`。`node` 可用於 repository governance suite，結果待執行。
+- Windows packaged EXE smoke：尚未以本分支成品執行，等待此 PR 的 Windows Actions；舊 v0.1.1 evidence 不代表 v0.1.2。
+- 真實供應商資料：`NOT VERIFIED`。未在此環境啟動 Claude Code/Codex、登入、讀取 Token 或執行推論；合成百分比不是實際額度。
+- Windows 11 實機 UAT：`HUMAN_TEST_PENDING`；需安裝 v0.1.2 後分別驗證真實 statusline 輸入與 Codex Desktop/CLI 版本，但公開紀錄不得包含帳號或額度原始資料。
+
 更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 
 ## 自動驗證

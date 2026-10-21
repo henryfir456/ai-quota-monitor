@@ -12,6 +12,7 @@
         Loaded="Window_Loaded"
         Closing="Window_Closing">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="CardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBackground}" />
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
@@ -45,7 +46,7 @@
                     <Button Content="{Binding CollapseButtonText}" Command="{Binding ToggleCollapseCommand}" AutomationProperties.Name="收合或展開供應商卡片" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
-                    <Button Content="精簡面板" Command="{Binding OpenFloatingPanelCommand}" AutomationProperties.Name="顯示精簡浮動面板" />
+                    <Button Content="顯示精簡浮動面板" Command="{Binding OpenFloatingPanelCommand}" AutomationProperties.Name="顯示精簡浮動面板" />
                     <Button Content="設定" Command="{Binding OpenSettingsCommand}" AutomationProperties.Name="開啟設定" />
                     <Button Content="{Binding ThemeButtonText}" Command="{Binding ToggleThemeCommand}" AutomationProperties.Name="切換深色或淺色主題" />
                 </StackPanel>
@@ -113,14 +114,21 @@
                                                         <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource SecondaryForeground}" />
                                                         <TextBlock Text="{Binding ResetText}" Foreground="{DynamicResource SecondaryForeground}" FontSize="11" Margin="0,4,0,0" />
                                                         <TextBlock Text="{Binding CountdownText}" Foreground="{DynamicResource SecondaryForeground}" FontSize="11" />
-                                                        <TextBlock Text="{Binding LastUpdatedText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" />
+                                                        <TextBlock Text="{Binding LastSuccessfulUpdateText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" />
+                                                        <TextBlock Text="{Binding DiagnosticText}" Foreground="{DynamicResource SecondaryForeground}" FontSize="10" TextWrapping="Wrap" Margin="0,3,0,0" />
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                     <TextBlock Text="{Binding SourceText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding LastUpdatedText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding LastSuccessfulUpdateText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" Margin="0,4,0,0" />
+                                    <Button Content="{Binding DataContext.ClaudeStatuslineActionText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Command="{Binding DataContext.ManageClaudeStatuslineCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Visibility="{Binding IsClaude, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,7,0,0"
+                                            AutomationProperties.Name="設定或復原 Claude Code 額度來源" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>

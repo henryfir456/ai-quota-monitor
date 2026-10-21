@@ -26,3 +26,21 @@ Issue #9 / PR #10 新增 Gate 已在程式來源 SHA `61b64cef0f58ec16064e321369
 本機已執行 Python XML/YAML/JSON 靜態 parse，但不代表 C# compile。Linux sandbox 沒有 .NET SDK、Windows PowerShell 5.1 或 Windows GUI；也禁止以 GitHub Windows Server runner 取代 Windows 11 實機 UAT。
 
 狀態詞彙：`PASS`、`FAIL`、`NOT RUN`、`NOT VERIFIED`、`HUMAN_TEST_PENDING`。最新 PR head 與本表所列已完成驗證 SHA 不同時，PR Checks 是該 head 的權威結果。
+
+## Issue #11 v0.1.2 本輪測試
+
+下列測試使用官方 protocol 形狀和合成回應；PR head Windows Actions 尚未執行前皆為 `NOT RUN`。它們不證明真實帳號成功取得額度。
+
+| Provider / 狀態 | 測試方式 | 預期 | 狀態 |
+| --- | --- | --- | --- |
+| Claude success | 官方 `rate_limits.five_hour` / `seven_day` 合成 JSON，透過 PowerShell helper 與 CurrentUserOnly pipe | 只傳百分比/reset，UI 新增成功時間；測試資料清楚標示合成 | NOT RUN · Windows Actions |
+| Claude unconfigured / uninstalled | provider 初始狀態與 executable locator | 分別顯示未設定、找不到 CLI；不啟動 Claude | NOT RUN · xUnit |
+| Claude parse failure / unsupported shape | malformed JSON 與非 object JSON 經 helper/parser | 顯示解析失敗或未支援；不外洩原文、不保留數字 | NOT RUN · xUnit + Windows PowerShell |
+| Claude no-input timeout / old success | 設定後超過 15 分鐘無 pipe 輸入；成功資料超過 freshness window | 前者顯示逾時；後者顯示過期並保留最後成功時間 | NOT RUN · xUnit |
+| Claude settings configure / conflict / rollback | 暫存使用者 profile 與合成 `settings.json` | 確認後備份並保留其他設定；遇衝突不覆寫；復原只刪 Monitor entry；helper 使用 PS 5.1 可讀 BOM | NOT RUN · xUnit |
+| Codex success | 官方 initialize/account/read/rateLimits JSONL 合成回應 | `experimentalApi=true`、`refreshToken=false`、期限映射正確；回應不保留帳號識別 | NOT RUN · xUnit |
+| Codex uninstalled / not logged in | locator no-match 與 `account:null` 合成 RPC | 顯示未安裝／未登入並提供建議；不嘗試登入或額度推測 | NOT RUN · xUnit |
+| Codex parse failure / timeout / unsupported | malformed response、provider timeout、RPC -32601、未知窗口 schema | 各自顯示明確狀態；百分比保持 N/A | NOT RUN · xUnit |
+| Refresh timestamp and UI state | success 後接失敗快照並監聽 ViewModel property change | 失敗不保留舊百分比；最後成功時間保留且診斷即時更新 | NOT RUN · xUnit |
+| Final v0.1.2 packaged EXE | 現有 `.github/workflows/ci.yml` Windows final package GUI smoke、reverse control 與 SHA identity | offline/no-account/no-token 啟動 PASS；失敗或 UNKNOWN 阻止 Release | NOT RUN · Windows Actions |
+| Real provider accounts | Windows 11 真實 Claude Code/Codex 版本與登入狀態 | 只有實際來源回報欄位後才能記錄額度讀取成功 | HUMAN_TEST_PENDING |

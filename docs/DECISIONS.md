@@ -29,18 +29,24 @@
 
 ## ADR-005｜Codex 官方 app-server quota query
 - 日期：2026-10-21
-- 決策：只呼叫官方文件與 protocol schema 確認的 `account/rateLimits/read`；僅依 `windowDurationMins` 映射週期；每次使用短生命週期子程序、環境 allowlist、stderr 丟棄與 sanitized error codes。
+- 決策：依官方 initialize capability 協定宣告 `experimentalApi=true`，先以 `account/read`（`refreshToken=false`）確認登入，再呼叫官方 `account/rateLimits/read`；只依 `windowDurationMins` 映射週期；每次使用短生命週期子程序、環境 allowlist、stderr 丟棄與 sanitized error codes。
 - 原因：不猜測 primary/secondary 的固定含義，不讀取 `auth.json`，不使用參考專案的非官方 fallback。
 - 風險：app-server 標示為 experimental；目標 Windows CLI 版本未在本開發環境驗證。
 
 ## ADR-006｜Claude 官方 statusline opt-in bridge
 - 日期：2026-10-21
-- 決策：提供 PowerShell helper 讓使用者自行配置官方 statusline stdin JSON；程式預設不改寫 Claude 設定，只透過 CurrentUserOnly named pipe 收百分比及 reset 欄位。
+- 決策：提供 PowerShell helper 接收官方 statusline stdin JSON。預設唯讀檢查設定；使用者確認後，完整備份原 `settings.json`、保留其他欄位並加入 helper；遇既有自訂 `statusLine` 或內容變更即停止，並提供只移除未變更 Monitor entry 的復原。
 - 原因：官方 statusline 是無 Token 的本機資料來源；未配置或欄位未出現時保留 UNKNOWN/N/A。
-- 影響：若使用者已有 statusline command，需自行整合；Monitor 不啟動 Claude CLI 或推論。
+- 影響：若使用者已有 statusline command，Monitor 保留原設定且不自動整合；Monitor 不啟動 Claude CLI 或推論。
 
 ## ADR-007｜Prerelease 與人工 UAT 的分界
 - 日期：2026-10-21
-- 決策：只有 Windows Release workflow 的 restore/build/test/publish/package 通過並附 checksum、SBOM、測試報告後才建立 `v0.1.0` prerelease；Windows 11 實機 UAT 清單明確維持 `HUMAN_TEST_PENDING`，不宣稱為已驗收。
+- 決策：每個 Windows prerelease 都由 Release workflow restore/build/test/publish/package，並在最終 packaged EXE 的 smoke 與 SHA-256 Gate 通過後建立；Windows 11 實機 UAT 清單維持 `HUMAN_TEST_PENDING`，不宣稱為已驗收。
 - 原因：使用者要求可攜 Windows 產物和 prerelease，同時明確禁止以 CI 或 Linux 冒充 Windows 實測。
 - 影響：prerelease 文件揭露未簽章與 UAT pending；stable release 不在本次授權範圍。
+
+## ADR-008｜來源失敗可診斷且不保留舊額度
+- 日期：2026-10-21
+- 決策：每個 provider/window 以固定錯誤碼表示未安裝、未設定、未登入、逾時、解析失敗、過期及不支援；UI 對應繁中原因與建議。只有 fresh、有效百分比更新成功時間；失敗時不把舊百分比當成最新值。
+- 原因：使用者回報兩個來源都只顯示 UNKNOWN/N/A，無法確認原因。
+- 影響：自動 fixture 可驗證協定與狀態分類，但不代表任何實際 Claude/Codex 帳號已成功提供額度。

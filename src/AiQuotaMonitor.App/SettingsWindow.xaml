@@ -33,7 +33,7 @@
         <CheckBox x:Name="StartWithWindowsCheckBox" Grid.Row="4" Content="登入 Windows 時啟動（預設關閉）" Margin="0,20,0,0" />
         <CheckBox x:Name="FloatingAlwaysOnTopCheckBox" Grid.Row="5" Content="精簡浮動面板保持最上層" Margin="0,18,0,0" />
         <TextBlock Grid.Row="6"
-                   Text="只提醒最新且受支援的實際來源資料。UNKNOWN、過期或查詢失敗時不提醒。Claude 需手動設定官方 statusline；Monitor 不會修改 Claude 設定。"
+                   Text="只提醒最新且受支援的實際來源資料。過期或查詢失敗時不提醒。Claude 額度來源可在主畫面設定或復原；既有自訂 statusLine 會保留。"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource SecondaryForeground}"
                    Margin="0,20,0,0" />

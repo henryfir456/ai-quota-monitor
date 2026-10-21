@@ -20,6 +20,13 @@
 | 14 | 系統匣結束、工作管理員與 process tree | 主程式退出；Monitor 啟動的 Codex app-server 不殘留；不刪改 CLI 設定／憑證 | NOT RUN |
 | 15 | Release SHA-256、portable ZIP 內容、無簽章告知 | `SHA256SUMS.txt` 與下載檔一致；ZIP 含 README／PRIVACY／SECURITY／SBOM／helper | NOT RUN |
 | 16 | 系統匣／主視窗暫停與恢復監控 | 暫停停止週期及網路／喚醒自動刷新；進行中的刷新完成後不續排；手動刷新仍可用；恢復時立即刷新 | NOT RUN |
-| 17 | 安裝 Issue #9 修正後的 v0.1.1 prerelease 並雙擊啟動 | 可見主視窗保持開啟；Task Manager 有 `AiQuotaMonitor`；此次啟動沒有 .NET Runtime 1026；關閉主視窗後程式依既有設計常駐系統匣 | NOT RUN · 僅在該 prerelease 通過 Windows Actions smoke gate 後執行；不附事件原文或個人路徑 |
+| 17 | v0.1.1 啟動回歸（歷史） | 使用者已回報 v0.1.1 在 Windows 11 成功啟動；這不證明 quota provider 可用 | PASS · 使用者回報；不延伸推定事件記錄或真實額度狀態 |
+| 18 | 安裝 v0.1.2 prerelease 並雙擊啟動 | 可見主視窗保持開啟；Task Manager 有 `AiQuotaMonitor`；關閉主視窗後程式依既有設計常駐系統匣 | NOT RUN · 等待 v0.1.2 Windows Release Gate；不需上傳事件原文或個人路徑 |
+| 19 | Claude 卡片一鍵設定與復原 | 確認提示說明完整 `settings.json` 本機備份；無衝突時只新增 helper；復原移除 Monitor entry、保留其他設定與備份 | NOT RUN · 使用隔離／可還原的測試設定；不要公開設定內容 |
+| 20 | Claude 已有自訂 statusLine、JSON 壞檔或 helper 路徑衝突 | Monitor 明確顯示衝突／解析原因，不覆寫原檔；備份和復原只觸及 Monitor 管理內容 | NOT RUN |
+| 21 | Claude 真實 statusline 輸入 | 只有官方 `rate_limits.five_hour`／`seven_day` 欄位可用時顯示比例與 reset；欄位缺席時保持 N/A 並給原因 | HUMAN_TEST_PENDING · 不公開真實比例、reset、session 或設定檔 |
+| 22 | Codex CLI 與 Windows Desktop 安裝差異 | Monitor 找到實際安裝的官方 CLI/App Server；既有合法登入可讀 rate limit；不要求 Token、不出現登入或推論操作 | HUMAN_TEST_PENDING · 記錄 app 版本與來源類型，不公開帳號資料 |
+| 23 | 未安裝、未登入、網路不可用、RPC 不支援、解析失敗或逾時 | 額度保留 N/A；卡片清楚區分狀態、固定錯誤碼、資料來源及簡短處理建議；不把失敗顯示成成功 | NOT RUN · 可在無帳號／斷網環境檢查；診斷只記錯誤碼 |
+| 24 | 刷新成功後再發生來源失敗 | 最後成功時間保留，失敗後百分比清除；主視窗和浮動面板診斷更新 | NOT RUN |
 
-UAT 結果只能在實際 Windows 11 裝置完成後更新。CI 建置、單元測試、Release asset 下載或 Linux 執行都不能代替第 1～16 項實機結果。
+UAT 結果只能在實際 Windows 11 裝置完成後更新。CI 建置、單元測試、Release asset 下載或 Linux 執行都不能代替第 1～24 項實機結果。回報給維護者時只需提供各列 PASS／FAIL／NOT RUN 與安全錯誤碼；不要提供真實額度、account identifier、Token、settings 檔或原始回應。

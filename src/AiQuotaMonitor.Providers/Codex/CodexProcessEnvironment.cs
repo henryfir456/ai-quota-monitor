@@ -13,7 +13,9 @@ public static class CodexProcessEnvironment
         "LOCALAPPDATA",
         "APPDATA",
         "TEMP",
-        "TMP"
+        "TMP",
+        "CODEX_HOME",
+        "CODEX_CLI_PATH"
     ];
 
     public static IReadOnlyDictionary<string, string> Filter(IEnumerable<KeyValuePair<string, string?>> environment)

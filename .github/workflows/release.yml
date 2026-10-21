@@ -3,7 +3,15 @@ name: Windows portable prerelease
 on:
   push:
     tags:
-      - 'v0.1.1'
+      - 'v0.1.2'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: The reviewed prerelease tag to create after all Windows gates pass.
+        required: true
+        type: choice
+        options:
+          - v0.1.2
 
 permissions:
   contents: read
@@ -27,15 +35,25 @@ jobs:
           persist-credentials: false
       - name: Verify release tag and application version
         shell: pwsh
+        env:
+          DISPATCH_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
-          if ($env:GITHUB_REF_NAME -ne 'v0.1.1') { throw 'Only v0.1.1 may publish this prerelease.' }
+          $expectedTag = 'v0.1.2'
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            if ($env:GITHUB_REF_NAME -ne 'main') { throw 'Manual prerelease dispatch must run from main.' }
+            if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
+            $existingTag = git ls-remote --tags origin "refs/tags/$expectedTag" "refs/tags/$expectedTag^{}"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not check whether the v0.1.2 tag already exists.' }
+            if ($existingTag) { throw 'Manual prerelease dispatch refuses to replace an existing tag.' }
+          }
+          elseif ($env:GITHUB_REF_NAME -ne $expectedTag) { throw 'Only v0.1.2 may publish this prerelease.' }
           $tagCommit = (git rev-parse HEAD).Trim()
           if ($tagCommit -ne $env:GITHUB_SHA) { throw 'Checked out source SHA differs from release tag SHA.' }
           $mainCommit = (git rev-parse refs/remotes/origin/main).Trim()
           git merge-base --is-ancestor $tagCommit $mainCommit
           if ($LASTEXITCODE -ne 0) { throw 'Release tag must point to a commit already contained in origin/main.' }
           [xml]$project = Get-Content -LiteralPath 'src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj'
-          if ($project.Project.PropertyGroup.Version -ne '0.1.1') { throw 'Application version and release tag differ.' }
+          if ($project.Project.PropertyGroup.Version -ne '0.1.2') { throw 'Application version and release tag differ.' }
           Write-Output "Verified release source SHA: $tagCommit"
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
@@ -85,7 +103,7 @@ jobs:
       - name: Package final Windows executable
         shell: pwsh
         env:
-          APP_VERSION: 0.1.1
+          APP_VERSION: 0.1.2
         run: |
           $dependencyReport = Join-Path $env:RUNNER_TEMP 'AiQuotaMonitor-dependencies.txt'
           $appPackages = dotnet list src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj package --include-transitive
@@ -127,7 +145,7 @@ jobs:
       - name: Smoke test final packaged EXE and deliberate failure control
         shell: pwsh
         env:
-          APP_VERSION: 0.1.1
+          APP_VERSION: 0.1.2
         run: |
           $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
           ./tests/scripts/Test-WindowsExecutableSmoke.ps1 `
@@ -139,7 +157,7 @@ jobs:
       - name: Verify tested package identity and SHA-256, then prepare release assets
         shell: pwsh
         env:
-          APP_VERSION: 0.1.1
+          APP_VERSION: 0.1.2
           UNIT_TEST_SUMMARY: ${{ needs.build-and-package.outputs.unit_test_summary }}
         run: |
           $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
@@ -198,8 +216,8 @@ jobs:
                   raise SystemExit('Malformed SHA256SUMS.txt entry.')
               expected[match.group(2)] = match.group(1)
           required = {
-              'AiQuotaMonitor-0.1.1-win-x64.exe',
-              'AiQuotaMonitor-0.1.1-win-x64-portable.zip',
+              'AiQuotaMonitor-0.1.2-win-x64.exe',
+              'AiQuotaMonitor-0.1.2-win-x64-portable.zip',
               'TEST_REPORT.txt',
               'WINDOWS_SMOKE_EVIDENCE.json',
           }
@@ -209,8 +227,8 @@ jobs:
               actual = hashlib.sha256((root / name).read_bytes()).hexdigest()
               if actual != digest:
                   raise SystemExit(f'SHA-256 verification failed for {name}.')
-          exe_hash = expected['AiQuotaMonitor-0.1.1-win-x64.exe']
-          zip_hash = expected['AiQuotaMonitor-0.1.1-win-x64-portable.zip']
+          exe_hash = expected['AiQuotaMonitor-0.1.2-win-x64.exe']
+          zip_hash = expected['AiQuotaMonitor-0.1.2-win-x64-portable.zip']
           if exe_hash != evidence.get('ExecutableSha256') or zip_hash != evidence.get('PackageSha256'):
               raise SystemExit('Release assets differ from the exact EXE/ZIP tested on Windows.')
           print(f'Windows smoke PASS; verified EXE SHA-256 {exe_hash}; verified ZIP SHA-256 {zip_hash}.')
@@ -218,7 +236,9 @@ jobs:
       - name: Create GitHub prerelease after all Windows gates pass
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          name: AI Quota Monitor v0.1.1 (Windows x64)
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: AI Quota Monitor v0.1.2 (Windows x64)
           body_path: artifacts/release/RELEASE_NOTES.md
           prerelease: true
           draft: false

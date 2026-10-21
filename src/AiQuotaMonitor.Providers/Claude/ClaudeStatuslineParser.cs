@@ -13,7 +13,35 @@ public static class ClaudeStatuslineParser
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
-            if (!root.TryGetProperty("rate_limits", out var limits) || limits.ValueKind != JsonValueKind.Object)
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return Empty(QuotaStatus.Unsupported, "unsupported_statusline_data", observedAtUtc);
+            }
+
+            if (root.ValueKind == JsonValueKind.Object &&
+                root.TryGetProperty("monitor_error", out var monitorError) &&
+                monitorError.ValueKind == JsonValueKind.String)
+            {
+                return monitorError.GetString() switch
+                {
+                    "parse_failure" => Empty(QuotaStatus.Error, "parse_failure", observedAtUtc),
+                    "provider_failure" => Empty(QuotaStatus.Error, "statusline_helper_failure", observedAtUtc),
+                    "unsupported_statusline_data" => Empty(QuotaStatus.Unsupported, "unsupported_statusline_data", observedAtUtc),
+                    _ => Empty(QuotaStatus.Unsupported, "unsupported_statusline_data", observedAtUtc)
+                };
+            }
+
+            if (!root.TryGetProperty("rate_limits", out var limits) || limits.ValueKind == JsonValueKind.Null)
+            {
+                return Empty(QuotaStatus.Unknown, "statusline_rate_limits_missing", observedAtUtc);
+            }
+
+            if (limits.ValueKind != JsonValueKind.Object)
+            {
+                return Empty(QuotaStatus.Unsupported, "unsupported_statusline_data", observedAtUtc);
+            }
+
+            if (!limits.EnumerateObject().Any(property => property.Name is "five_hour" or "seven_day"))
             {
                 return Empty(QuotaStatus.Unknown, "statusline_rate_limits_missing", observedAtUtc);
             }
@@ -26,7 +54,7 @@ public static class ClaudeStatuslineParser
         }
         catch (JsonException)
         {
-            return Empty(QuotaStatus.Unsupported, "unsupported_statusline_data", observedAtUtc);
+            return Empty(QuotaStatus.Error, "parse_failure", observedAtUtc);
         }
     }
 

@@ -17,3 +17,17 @@
 Monitor 不讀取 Codex 或 Claude credential 檔、不自動登入、不安裝或修復 CLI、不執行付費推論。Codex app-server 自行管理其帳號／連線狀態。Claude helper 只挑出官方 `five_hour` 與 `seven_day` rate-limit 欄位，透過 CurrentUserOnly pipe 傳入 Monitor；合成 session/transcript 欄位的洩漏測試通過。所有單元與 helper 整合 fixture 都是合成資料。
 
 上述 Windows/Ubuntu 證據適用於程式候選來源 SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9`；後續文件-only head 的 Checks 以 PR #10 顯示為準。Release workflow 尚未執行，Windows 11 實機 UAT 仍為 `HUMAN_TEST_PENDING`。目前本機為受限 Linux sandbox，沒有 .NET SDK、Windows GUI 或 Windows PowerShell 5.1；未宣稱本機 Windows build、parser 或實機安全檢查通過。
+
+## Issue #11 v0.1.2 安全驗證狀態
+
+以下是本 PR 需於同一完整 head SHA 驗證的範圍；在 Windows Actions 尚未執行前標記 `NOT RUN`。不會以原 v0.1.1 Windows Gate 或 synthetic fixture 代替。
+
+| 檢查 | 風險控制 | 狀態 |
+| --- | --- | --- |
+| Claude setup | 使用者確認後才讀寫／完整備份設定；既有 statusLine 與檔案衝突 fail closed；復原拒絕覆寫被修改的狀態列 | NOT RUN · xUnit/Windows Actions |
+| Claude helper | helper 只送 rate_limits 欄位或固定錯誤代碼；malformed JSON、session ID、transcript path 不輸出、不記錄 | NOT RUN · xUnit/Windows PowerShell |
+| Codex account probe | `account/read` 使用 `refreshToken=false`，只判斷 account null/object；錯誤訊息及 account identifier 不進 UI、log 或測試輸出 | NOT RUN · synthetic JSON-RPC tests |
+| Codex process | CLI 路徑只接受 codex.exe 候選；程序採 OS env allowlist、stderr 丟棄、短生命週期；不碰 credential 檔 | NOT RUN · xUnit/Windows Actions |
+| Diagnostics/timestamps | UI 僅用固定錯誤碼映射本地化建議；原始配額/帳號資料不入 log；失敗清除百分比且保留最後成功時間 | NOT RUN · xUnit |
+| Secret scan | Gitleaks full-history | NOT RUN · PR Ubuntu Actions |
+| Actual vendor accounts | 本環境不讀取登入憑證，不自動登入、不推論 | NOT VERIFIED · Windows 11 UAT pending |

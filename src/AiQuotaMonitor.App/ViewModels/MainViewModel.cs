@@ -36,13 +36,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _consecutiveFailures;
     private bool _refreshAfterCurrent;
     private DateTimeOffset? _lastManualRefreshAt;
-    private string _statusMessage = "啟動後立即以唯讀方式查詢；沒有來源資料時顯示 UNKNOWN/N/A。";
+    private string _statusMessage = "啟動後以唯讀方式查詢；來源狀態、資料時間與處理建議會顯示在各供應商卡片。";
 
-    public MainViewModel(SettingsStore? settingsStore = null)
+    public MainViewModel(
+        SettingsStore? settingsStore = null,
+        string claudeInitialErrorCode = "statusline_not_configured",
+        string claudeStatuslineActionText = "設定 Claude 額度來源")
     {
         _settingsStore = settingsStore ?? new SettingsStore();
         _settings = _settingsStore.Load();
-        _claudeProvider = new ClaudeStatuslineProvider();
+        _claudeProvider = new ClaudeStatuslineProvider(claudeInitialErrorCode);
         _claudePipeHost = new ClaudeStatuslinePipeHost(_claudeProvider);
         _refreshService = new QuotaRefreshService(
         [
@@ -64,6 +67,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ToggleMonitoringPauseCommand = new RelayCommand(ToggleMonitoringPause);
         OpenSettingsCommand = new RelayCommand(() => SettingsRequested?.Invoke());
         OpenFloatingPanelCommand = new RelayCommand(() => FloatingPanelRequested?.Invoke());
+        ManageClaudeStatuslineCommand = new RelayCommand(() => ClaudeStatuslineManageRequested?.Invoke());
+        ClaudeStatuslineActionText = claudeStatuslineActionText;
 
         _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_settings.RefreshIntervalSeconds) };
         _refreshTimer.Tick += RefreshTimer_Tick;
@@ -89,6 +94,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public event Action? FloatingPanelRequested;
 
+    public event Action? ClaudeStatuslineManageRequested;
+
     public event Action<bool>? MonitoringPauseChanged;
 
     public event Action<ThemeMode>? ThemeChanged;
@@ -108,6 +115,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public RelayCommand OpenSettingsCommand { get; }
 
     public RelayCommand OpenFloatingPanelCommand { get; }
+
+    public RelayCommand ManageClaudeStatuslineCommand { get; }
+
+    public string ClaudeStatuslineActionText { get; private set; }
 
     public bool IsRefreshing
     {
@@ -169,6 +180,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public AppSettings Settings => _settings;
 
+    public void UpdateClaudeStatuslineState(string errorCode, string actionText)
+    {
+        _claudeProvider.SetUnavailableReason(errorCode);
+        ClaudeStatuslineActionText = actionText;
+        OnPropertyChanged(nameof(ClaudeStatuslineActionText));
+    }
+
     public async Task StartAsync()
     {
         if (_started)
@@ -216,13 +234,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 CheckLowQuotaAlerts(snapshot);
             }
 
-            var hasFailure = snapshots.SelectMany(snapshot => snapshot.Windows).Any(window => window.Status == QuotaStatus.Error);
+            var hasFailure = snapshots.SelectMany(snapshot => snapshot.Windows)
+                .Any(window => window.Status != QuotaStatus.Fresh || window.RemainingPercent is null);
             _consecutiveFailures = hasFailure ? Math.Min(_consecutiveFailures + 1, 6) : 0;
             StatusMessage = IsMonitoringPaused
-                ? hasFailure ? "部分來源查詢失敗；自動監控仍暫停。" : "手動刷新完成；自動監控仍暫停。"
+                ? hasFailure ? "部分來源尚未提供可用額度；請查看卡片原因。自動監控仍暫停。" : "手動刷新完成；自動監控仍暫停。"
                 : hasFailure
-                    ? $"部分來源查詢失敗；將於 {NextRefreshInterval.TotalMinutes:0} 分鐘後重試。"
-                    : $"最後查詢：{DateTimeOffset.Now:yyyy/MM/dd HH:mm:ss} · 下次約 {NextRefreshInterval.TotalMinutes:0} 分鐘後刷新";
+                    ? $"部分來源尚未提供可用額度；請查看卡片原因。將於 {NextRefreshInterval.TotalMinutes:0} 分鐘後重試。"
+                    : $"來源額度已更新：{DateTimeOffset.Now:yyyy/MM/dd HH:mm:ss} · 下次約 {NextRefreshInterval.TotalMinutes:0} 分鐘後刷新";
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
         {

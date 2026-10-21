@@ -67,7 +67,7 @@ public static class CodexRateLimitParser
         }
         catch (JsonException)
         {
-            return Empty(QuotaStatus.Unsupported, "unsupported_response", observedAtUtc);
+            return Empty(QuotaStatus.Error, "parse_failure", observedAtUtc);
         }
     }
 
@@ -83,16 +83,32 @@ public static class CodexRateLimitParser
 
         if (result.TryGetProperty("rateLimits", out var legacy) && legacy.ValueKind == JsonValueKind.Object)
         {
-            if (!legacy.TryGetProperty("limitId", out var limitId) ||
-                limitId.ValueKind == JsonValueKind.Null ||
-                (limitId.ValueKind == JsonValueKind.String && limitId.GetString() == "codex"))
+            if (legacy.TryGetProperty("limitId", out var limitId))
             {
+                if (limitId.ValueKind == JsonValueKind.String && limitId.GetString() == "codex")
+                {
+                    return legacy;
+                }
+
+                if (limitId.ValueKind == JsonValueKind.Null && HasLegacyQuotaWindows(legacy))
+                {
+                    return legacy;
+                }
+            }
+            else if (HasLegacyQuotaWindows(legacy))
+            {
+                // Older single-bucket responses omit limitId. Treat it as Codex only
+                // when at least one official window field is actually present.
                 return legacy;
             }
         }
 
         return null;
     }
+
+    private static bool HasLegacyQuotaWindows(JsonElement legacy) =>
+        (legacy.TryGetProperty("primary", out var primary) && primary.ValueKind != JsonValueKind.Null) ||
+        (legacy.TryGetProperty("secondary", out var secondary) && secondary.ValueKind != JsonValueKind.Null);
 
     private static Candidate? ParseCandidate(JsonElement limits, string name, DateTimeOffset observedAtUtc)
     {

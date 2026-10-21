@@ -2,8 +2,12 @@
 $maximumInputLength = 1048576
 $pipeName = 'AiQuotaMonitor.ClaudeStatusline.v1'
 
-function Send-QuotaSnapshot($windows) {
-    $minimalPayload = @{ rate_limits = $windows } | ConvertTo-Json -Compress -Depth 5
+function Send-QuotaSnapshot($windows, $errorCode) {
+    if ($null -ne $errorCode) {
+        $minimalPayload = @{ monitor_error = $errorCode } | ConvertTo-Json -Compress -Depth 2
+    } else {
+        $minimalPayload = @{ rate_limits = $windows } | ConvertTo-Json -Compress -Depth 5
+    }
     try {
         $pipe = [System.IO.Pipes.NamedPipeClientStream]::new('.', $pipeName, [System.IO.Pipes.PipeDirection]::Out)
         $pipe.Connect(100)
@@ -22,12 +26,23 @@ try {
     Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
     $rawInput = [Console]::In.ReadToEnd()
     if ($null -eq $rawInput -or $rawInput.Length -gt $maximumInputLength) {
-        Send-QuotaSnapshot @{}
+        Send-QuotaSnapshot @{} 'parse_failure'
         Write-Output 'Claude 額度：N/A'
         exit 0
     }
 
-    $inputData = ConvertFrom-Json -InputObject $rawInput -ErrorAction Stop
+    try {
+        $inputData = ConvertFrom-Json -InputObject $rawInput -ErrorAction Stop
+    } catch {
+        Send-QuotaSnapshot @{} 'parse_failure'
+        Write-Output 'Claude 額度：N/A'
+        exit 0
+    }
+    if ($null -eq $inputData -or $inputData -isnot [System.Management.Automation.PSCustomObject]) {
+        Send-QuotaSnapshot @{} 'unsupported_statusline_data'
+        Write-Output 'Claude 額度：N/A'
+        exit 0
+    }
     $windows = @{}
     $display = @()
 
@@ -66,7 +81,7 @@ try {
     Write-Output ('Claude 額度：' + ($display -join ' · '))
     exit 0
 } catch {
-    Send-QuotaSnapshot @{}
+    Send-QuotaSnapshot @{} 'provider_failure'
     Write-Output 'Claude 額度：N/A'
     exit 0
 }
