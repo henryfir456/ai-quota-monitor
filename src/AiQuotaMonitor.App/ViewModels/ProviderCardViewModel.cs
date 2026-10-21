@@ -15,7 +15,7 @@ public sealed class ProviderCardViewModel : INotifyPropertyChanged
     private string _lastUpdatedText = "最後成功：N/A";
     private string _diagnosticText = "原因：尚未收到額度來源結果。建議：等待首次唯讀刷新完成。";
 
-    public ProviderCardViewModel(ProviderId providerId)
+    public ProviderCardViewModel(ProviderId providerId, string? initialErrorCode = null)
     {
         ProviderId = providerId;
         Name = providerId switch
@@ -25,7 +25,7 @@ public sealed class ProviderCardViewModel : INotifyPropertyChanged
             _ => providerId.ToString()
         };
         var now = DateTimeOffset.UtcNow;
-        var errorCode = providerId == ProviderId.Claude ? "statusline_not_configured" : "provider_not_checked";
+        var errorCode = initialErrorCode ?? (providerId == ProviderId.Claude ? "statusline_not_configured" : "provider_not_checked");
         Windows = new ObservableCollection<QuotaWindowViewModel>
         {
             new(new QuotaObservation(providerId, WindowId.FiveHour, null, null, now, SourceName(providerId), QuotaStatus.Unknown, errorCode)),

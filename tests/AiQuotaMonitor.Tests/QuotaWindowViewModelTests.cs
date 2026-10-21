@@ -20,7 +20,7 @@ public sealed class QuotaWindowViewModelTests
         Assert.Equal(successfulAt, viewModel.LastSuccessfulUpdateAtUtc);
         Assert.Contains("最後成功", viewModel.LastSuccessfulUpdateText, StringComparison.Ordinal);
         Assert.Equal("N/A", viewModel.RemainingText);
-        Assert.Contains("Codex 尚未登入", viewModel.DiagnosticText, StringComparison.Ordinal);
+        Assert.Contains("Codex 回報目前沒有已登入的帳號", viewModel.DiagnosticText, StringComparison.Ordinal);
         Assert.Equal("尚未登入", viewModel.StatusText);
     }
 
@@ -32,7 +32,7 @@ public sealed class QuotaWindowViewModelTests
             "Claude Code official statusline", QuotaStatus.Unknown, "statusline_not_configured"));
 
         Assert.Null(viewModel.LastSuccessfulUpdateAtUtc);
-        Assert.Contains("尚未設定 Claude Code statusline", viewModel.DiagnosticText, StringComparison.Ordinal);
+        Assert.Contains("尚未設定 Claude Code 官方 statusline", viewModel.DiagnosticText, StringComparison.Ordinal);
         Assert.Contains("statusline_not_configured", viewModel.DiagnosticText, StringComparison.Ordinal);
     }
 }

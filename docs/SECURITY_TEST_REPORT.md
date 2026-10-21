@@ -24,8 +24,8 @@ Monitor 不讀取 Codex 或 Claude credential 檔、不自動登入、不安裝�
 
 | 檢查 | 風險控制 | 狀態 |
 | --- | --- | --- |
-| Claude setup | 使用者確認後才讀寫／完整備份設定；既有 statusLine 與檔案衝突 fail closed；復原拒絕覆寫被修改的狀態列 | NOT RUN · xUnit/Windows Actions |
-| Claude helper | helper 只送 rate_limits 欄位或固定錯誤代碼；malformed JSON、session ID、transcript path 不輸出、不記錄 | NOT RUN · xUnit/Windows PowerShell |
+| Claude setup | 啟動時不讀設定；使用者確認檢查後才讀；不可讀檔與競爭建立 fail closed；journal 先於設定寫入；既有 statusLine 不覆寫；復原拒絕覆寫被修改的狀態列 | NOT RUN · xUnit/Windows Actions |
+| Claude helper | helper 只送合法 rate_limits 欄位或固定錯誤代碼；錯誤百分比/reset 轉安全 sentinel；malformed JSON、session ID、transcript path 不輸出、不記錄 | NOT RUN · xUnit/Windows PowerShell |
 | Codex account probe | `account/read` 使用 `refreshToken=false`，只判斷 account null/object；錯誤訊息及 account identifier 不進 UI、log 或測試輸出 | NOT RUN · synthetic JSON-RPC tests |
 | Codex process | CLI 路徑只接受 codex.exe 候選；程序採 OS env allowlist、stderr 丟棄、短生命週期；不碰 credential 檔 | NOT RUN · xUnit/Windows Actions |
 | Diagnostics/timestamps | UI 僅用固定錯誤碼映射本地化建議；原始配額/帳號資料不入 log；失敗清除百分比且保留最後成功時間 | NOT RUN · xUnit |

@@ -6,8 +6,8 @@
 
 - Anthropic 官方 [Claude Code setup 文件](https://code.claude.com/docs/en/setup) 的 Windows 卸載命令列出原生安裝 launcher `%USERPROFILE%\.local\bin\claude.exe`，版本檔放 `%USERPROFILE%\.local\share\claude`。Native Windows 安裝不需系統管理員；Monitor 也會檢查常見 `%APPDATA%\npm\claude.cmd`、`%LOCALAPPDATA%\Programs\Claude\claude.exe` 與 PATH CLI，僅判斷檔案存在，不執行 CLI。使用者若在 WSL 安裝，需在 Windows 端另有 Claude Code CLI 才能觸發 Windows statusline helper。
 - Anthropic 官方 [Claude Code status line 文件](https://code.claude.com/docs/en/statusline) 說明：Claude Code 將本機 session JSON 經標準輸入傳給使用者配置的 statusline command，並顯示 command 的標準輸出。文件的 `rate_limits` 欄位表列 `five_hour.used_percentage`、`seven_day.used_percentage`（0～100）及各自的 `resets_at`（Unix epoch 秒）。欄位可能在首次 API 回覆前為空；狀態列由事件觸發，也可由使用者設定 `refreshInterval`。
-- 官方文件要求在 `~/.claude/settings.json` 或 project settings 設定 `statusLine`。Monitor 啟動時讀取使用者設定檔，只檢查 statusLine/衝突並在 UI 顯示狀態；使用者確認啟用後才建立完整本機備份並加入隨附 helper。既有自訂 statusLine、無效 JSON 或 helper 衝突時 fail closed。復原只移除與 Monitor 記錄完全相符的設定，不自動刪除備份或 helper。
-- Claude bridge 只把兩個已核實視窗的百分比與 reset epoch seconds 寫入限本機目前使用者連線的 named pipe；不傳送 session ID、prompt ID、transcript path、工作目錄、Token 或完整 statusline JSON。程式未啟動時，statusline command 仍可輸出其本機百分比摘要，但不會排隊或寫入檔案。
+- 官方文件要求在 `~/.claude/settings.json` 或 project settings 設定 `statusLine`。Monitor 啟動時不讀取使用者設定檔；使用者在 Claude 卡片確認本機檢查後，Monitor 才辨識 statusLine／衝突。啟用時先建立完整本機備份，再加入隨附 helper。既有自訂 statusLine、無效 JSON 或 helper 衝突時 fail closed。復原只移除與 Monitor 記錄完全相符的設定，不刪除完整備份。
+- Claude bridge 只把兩個已核實視窗的合法百分比與 reset epoch seconds，或固定錯誤代碼／sanitized sentinel，寫入限本機目前使用者連線的 named pipe；格式錯誤的原始欄位不轉送。不傳送 session ID、prompt ID、transcript path、工作目錄、Token 或完整 statusline JSON。程式未啟動時，statusline command 仍可輸出本機合法百分比摘要，但不會排隊或寫入檔案。
 - [Trafalgardi/ai-usage-widget v2.3.0](https://github.com/Trafalgardi/ai-usage-widget/tree/v2.3.0) 的 Claude adapter 讀取 Claude credentials 檔並呼叫未公開的 OAuth usage endpoint。這些存取方式不屬於本產品的允許資料來源，未複製、未執行其 EXE，也未呼叫該 endpoint。
 
 ## 版本與支援狀態

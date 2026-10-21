@@ -43,6 +43,11 @@ try {
         Write-Output 'Claude 額度：N/A'
         exit 0
     }
+    if ($null -ne $inputData.rate_limits -and $inputData.rate_limits -isnot [System.Management.Automation.PSCustomObject]) {
+        Send-QuotaSnapshot @{} 'unsupported_statusline_data'
+        Write-Output 'Claude 額度：N/A'
+        exit 0
+    }
     $windows = @{}
     $display = @()
 
@@ -56,18 +61,46 @@ try {
         }
 
         if ($null -eq $sourceWindow) { continue }
+        if ($sourceWindow -isnot [System.Management.Automation.PSCustomObject]) {
+            $windows[$mapping.Target] = '__invalid_window_shape__'
+            continue
+        }
         $usedValue = $sourceWindow.used_percentage
         $isNumber = $usedValue -is [double] -or $usedValue -is [decimal] -or $usedValue -is [int] -or $usedValue -is [long]
-        if ($null -eq $usedValue -or -not $isNumber -or [double]::IsNaN([double]$usedValue) -or [double]::IsInfinity([double]$usedValue) -or [double]$usedValue -lt 0 -or [double]$usedValue -gt 100) { continue }
+        $validUsedValue = $isNumber -and
+            -not [double]::IsNaN([double]$usedValue) -and
+            -not [double]::IsInfinity([double]$usedValue) -and
+            [double]$usedValue -ge 0 -and [double]$usedValue -le 100
+        if ($validUsedValue) {
+            $window = @{ used_percentage = [double]$usedValue }
+        } else {
+            # Send a fixed invalid-type marker so C# can report a precise reason
+            # without forwarding arbitrary statusline data over the local pipe.
+            $window = @{ used_percentage = '__invalid_used_percentage__' }
+        }
 
-        $window = @{ used_percentage = [double]$usedValue }
         $resetValue = $sourceWindow.resets_at
-        if ($null -ne $resetValue -and $resetValue -is [ValueType]) {
-            $window.resets_at = $resetValue
+        if ($null -eq $resetValue) {
+            if ($sourceWindow.PSObject.Properties.Name -contains 'resets_at') {
+                $window.resets_at = $null
+            }
+        } else {
+            $isResetNumber = $resetValue -is [double] -or $resetValue -is [decimal] -or $resetValue -is [int] -or $resetValue -is [long]
+            if ($isResetNumber -and -not [double]::IsNaN([double]$resetValue) -and -not [double]::IsInfinity([double]$resetValue) -and [math]::Truncate([double]$resetValue) -eq [double]$resetValue) {
+                try {
+                    $window.resets_at = [long]$resetValue
+                } catch {
+                    $window.resets_at = '__invalid_resets_at__'
+                }
+            } else {
+                $window.resets_at = '__invalid_resets_at__'
+            }
         }
         $windows[$mapping.Target] = $window
-        $remaining = 100 - [double]$usedValue
-        $display += [string]::Format([System.Globalization.CultureInfo]::InvariantCulture, '{0} {1:0.#}%', $mapping.Label, $remaining)
+        if ($validUsedValue) {
+            $remaining = 100 - [double]$usedValue
+            $display += [string]::Format([System.Globalization.CultureInfo]::InvariantCulture, '{0} {1:0.#}%', $mapping.Label, $remaining)
+        }
     }
 
     if ($windows.Count -eq 0) {

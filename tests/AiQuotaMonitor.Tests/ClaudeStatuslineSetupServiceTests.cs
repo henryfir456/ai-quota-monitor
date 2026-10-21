@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Diagnostics;
 using AiQuotaMonitor.App.Services;
 
 namespace AiQuotaMonitor.Tests;
@@ -134,6 +135,78 @@ public sealed class ClaudeStatuslineSetupServiceTests : IDisposable
     }
 
     [Fact]
+    public void InaccessibleSettingsCannotBeTreatedAsMissingOrReplaced()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var settingsDirectory = Path.Combine(_userProfile, ".claude");
+        Directory.CreateDirectory(settingsDirectory);
+        var settingsPath = Path.Combine(settingsDirectory, "settings.json");
+        const string original = "{\"theme\":\"dark\",\"privateSyntheticValue\":\"KEEP_THIS\"}";
+        File.WriteAllText(settingsPath, original);
+        var service = CreateService();
+        var account = Environment.UserDomainName + "\\" + Environment.UserName;
+        var denyApplied = false;
+        try
+        {
+            RunIcacls(settingsPath, "/deny", account + ":(R)");
+            denyApplied = true;
+            var result = service.Configure();
+
+            Assert.Equal("settings_read_failure", result.ResultCode);
+        }
+        finally
+        {
+            if (denyApplied)
+            {
+                RunIcacls(settingsPath, "/remove:d", account);
+            }
+        }
+
+        Assert.Equal(original, File.ReadAllText(settingsPath));
+        Assert.Empty(Directory.GetFiles(settingsDirectory, "settings.json.aiquota-*.bak"));
+    }
+
+    [Fact]
+    public void InterruptedSetupCanBeCleanedWithoutChangingSettings()
+    {
+        var service = CreateService(claudeInstalled: true);
+        var settingsPath = Path.Combine(_userProfile, ".claude", "settings.json");
+        var helperPath = Path.Combine(_localAppData, "AiQuotaMonitor", "claude-statusline.ps1");
+        Assert.Equal("configured", service.Configure().ResultCode);
+        File.Delete(settingsPath);
+
+        var state = service.Inspect();
+
+        Assert.Equal("statusline_setup_incomplete", state.ErrorCode);
+        Assert.True(state.CanRollback);
+        Assert.Equal("restored", service.Rollback().ResultCode);
+        Assert.False(File.Exists(settingsPath));
+        Assert.False(File.Exists(Path.Combine(_localAppData, "AiQuotaMonitor", "claude-statusline-setup.json")));
+        Assert.False(File.Exists(helperPath));
+    }
+
+    [Fact]
+    public void UnreadableSetupJournalBlocksConfigurationWithoutCreatingSettings()
+    {
+        var monitorDirectory = Path.Combine(_localAppData, "AiQuotaMonitor");
+        Directory.CreateDirectory(monitorDirectory);
+        File.WriteAllText(Path.Combine(monitorDirectory, "claude-statusline-setup.json"), "{ malformed");
+        var service = CreateService(claudeInstalled: true);
+
+        var state = service.Inspect();
+        var result = service.Configure();
+
+        Assert.Equal("setup_journal_unreadable", state.ErrorCode);
+        Assert.Equal("setup_journal_unreadable", result.ResultCode);
+        Assert.False(File.Exists(Path.Combine(_userProfile, ".claude", "settings.json")));
+        Assert.False(File.Exists(Path.Combine(monitorDirectory, "claude-statusline.ps1")));
+    }
+
+    [Fact]
     public void RollbackRefusesToOverwriteAStatuslineChangedByTheUser()
     {
         var service = CreateService();
@@ -198,6 +271,29 @@ public sealed class ClaudeStatuslineSetupServiceTests : IDisposable
         fileExists: path => Path.GetFileName(path).Equals("claude-statusline.ps1", StringComparison.OrdinalIgnoreCase)
             ? File.Exists(path)
             : claudeInstalled);
+
+    private static void RunIcacls(string path, params string[] arguments)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.SystemDirectory, "icacls.exe"),
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        startInfo.ArgumentList.Add(path);
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("icacls.exe could not be started.");
+        _ = process.StandardOutput.ReadToEnd();
+        _ = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.Equal(0, process.ExitCode);
+    }
 
     public void Dispose()
     {

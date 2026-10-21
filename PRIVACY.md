@@ -5,7 +5,7 @@
 ## 處理的資料
 
 - Codex：使用者按啟動／刷新後，程式以本機已安裝的 `codex.exe app-server` 執行官方 `account/read`（`refreshToken=false`）及 `account/rateLimits/read` RPC。前一個回應只用來判斷 `account` 是否為 null；不保留帳號欄位、Email 或原始回覆。程式不開啟 Codex 憑證檔、不讀出 Token、不記錄 app-server stderr。Codex app-server 可能使用它自行管理的登入狀態並按 Codex 的產品行為連線；本程式不取得或設定其 Token，也不選擇未經官方文件證實的 endpoint。
-- Claude：Monitor 啟動時會讀取 `~/.claude/settings.json`，只用來辨識 `statusLine` 狀態與衝突，不顯示或記錄設定內容。只有使用者在 Claude 卡片確認設定時，Monitor 才會完整備份該檔、保留其他 JSON 欄位並加入自己的 statusline command。備份留在同一個 Claude 設定資料夾，可能含有使用者自行放入的私人設定值；不會傳出本機。helper 只保留 `rate_limits.five_hour` 和 `rate_limits.seven_day` 的百分比、reset 欄位，透過限本機目前使用者的 named pipe 傳給 Monitor；其他 session、prompt、transcript 和工作目錄欄位不會寫入檔案或送給 Monitor。
+- Claude：Monitor 啟動時不讀取 `~/.claude/settings.json`。使用者按下 Claude 卡片的「檢查／設定」並確認後，Monitor 才在本機辨識 `statusLine` 狀態與衝突，不顯示或記錄其他設定內容。若無衝突並繼續設定，Monitor 會完整備份該檔、保留其他 JSON 欄位並加入自己的 statusline command。備份留在同一個 Claude 設定資料夾，可能含有使用者自行放入的私人設定值；不會傳出本機。helper 只保留 `rate_limits.five_hour` 和 `rate_limits.seven_day` 的合法數值與 reset 欄位；格式錯誤的值會轉成固定錯誤標記，不會把任意 statusline 字串送給 Monitor。資料透過限本機目前使用者的 named pipe 傳送；其他 session、prompt、transcript 和工作目錄欄位不會寫入檔案或送給 Monitor。
 - UI 顯示必要的來源、觀測時間、百分比、reset 和資料狀態。Monitor 不保存原始帳號資料或 API 回覆。
 - Monitor 偏好設定只保存在 `%LOCALAPPDATA%\AiQuotaMonitor\settings.json`，預期僅含主題、刷新間隔、視窗位置與浮動面板置頂偏好、低額度提醒選項及啟動偏好；不含憑證、Token、session ID 或額度回覆。Claude statusline helper 與設定交易記錄也留在該資料夾。監控暫停只在本次執行期間有效。若要重設或刪除偏好，請先結束 Monitor，再由 Windows 檔案總管刪除該設定檔；Claude 完整備份可另外在 `~/.claude` 檢視或刪除。
 
@@ -18,6 +18,6 @@
 
 ## 使用者控制
 
-- Claude 預設不修改設定。設定前會讀取 `settings.json` 辨識現有 `statusLine`；使用者確認後才建立完整本機備份並新增 helper command。若有既存 statusline、格式錯誤或競爭修改，Monitor fail closed。復原只移除與記錄完全相符的 Monitor 項目，不覆寫使用者後來變更的內容；備份與 helper 檔不會自動刪除。
+- Claude 預設不讀取或修改設定。使用者先確認本機檢查後，Monitor 才讀取 `settings.json` 辨識現有 `statusLine`；若要新增 helper command，確認流程會先建立完整本機備份。若有既存 statusline、格式錯誤或競爭修改，Monitor fail closed。復原只移除與記錄完全相符的 Monitor 項目，不覆寫使用者後來變更的內容；完整備份會保留，helper 只會在復原未完成的交易時安全清理。
 - 退出 Monitor 會停止輪詢並終止本程式啟動的 Codex app-server child process。Monitor 關閉後，Claude helper 不會保存或排隊狀態列資料。
 - 可攜 ZIP 未簽章；SHA-256 只用於驗證下載檔案與 Release manifest 一致，不表示發行者身分已驗證。

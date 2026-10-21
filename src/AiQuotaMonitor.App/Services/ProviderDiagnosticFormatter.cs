@@ -42,7 +42,10 @@ public static class ProviderDiagnosticFormatter
         {
             "claude_cli_not_found" or "codex_cli_not_found" => "CLI 未安裝",
             "statusline_not_configured" => "尚未設定",
+            "claude_settings_not_inspected" => "尚未檢查",
             "statusline_waiting_for_data" => "等待 statusline 資料",
+            "statusline_setup_incomplete" => "設定未完成",
+            "setup_journal_unreadable" => "設定記錄無法讀取",
             "statusline_rate_limits_missing" => "來源未回報額度",
             "statusline_configuration_conflict" => "設定衝突",
             "helper_unavailable" => "helper 遺失",
@@ -69,9 +72,18 @@ public static class ProviderDiagnosticFormatter
             (ProviderId.Claude, "claude_cli_not_found") => (
                 "找不到 Claude Code CLI。",
                 "確認已安裝 Claude Code 並在 PATH；Monitor 不會代為安裝。"),
+            (ProviderId.Claude, "claude_settings_not_inspected") => (
+                "Claude settings.json 尚未檢查；Monitor 不會在背景讀取這份可能含私人設定的檔案。",
+                "按「檢查／設定 Claude 額度來源」並確認本機檢查；若要啟用 statusLine，Monitor 會先備份原檔。"),
             (ProviderId.Claude, "statusline_not_configured") => (
                 "尚未設定 Claude Code 官方 statusline。",
                 "按「設定 Claude 額度來源」啟用本機 helper；既有設定會先備份，遇到自訂 statusLine 時會停止。"),
+            (ProviderId.Claude, "statusline_setup_incomplete") => (
+                "Claude 額度設定在寫入期間中斷，復原記錄仍在本機。",
+                "按「復原未完成的 Claude 設定」清理 Monitor 自己的記錄；使用者變更會保留。"),
+            (ProviderId.Claude, "setup_journal_unreadable") => (
+                "Monitor 的 Claude 設定記錄損毀或無法讀取；為避免覆寫，設定操作已停止。",
+                "檢查本機 %LOCALAPPDATA%\\AiQuotaMonitor 設定記錄與 Claude 備份；不要直接覆寫 settings.json。"),
             (ProviderId.Claude, "statusline_waiting_for_data") => (
                 "statusline 已設定，但 Claude Code 尚未傳來含額度欄位的更新。",
                 "在原本使用的 Claude Code session 等待 statusline 更新；不要為取得數值額外觸發推論。"),

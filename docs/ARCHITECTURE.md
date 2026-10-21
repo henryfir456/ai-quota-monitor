@@ -34,7 +34,7 @@ WPF ViewModel ◀── QuotaRefreshService ◀── ProviderSnapshot / QuotaOb
 
 ### Claude Code
 
-官方 statusline 資料由 Claude Code 在本機以 JSON stdin 呼叫使用者設定的 command。Monitor 啟動時只讀 `~/.claude/settings.json` 檢查來源狀態；只有使用者確認設定時才備份完整檔案、保留其他 JSON 欄位並加入隨附 helper。已存在的自訂 `statusLine` 會阻止寫入。helper 只傳 `five_hour`、`seven_day` rate limits 欄位或固定安全錯誤碼；設定後 15 分鐘未收到資料會逾時，最後成功資料超過 15 分鐘則標為過期。
+官方 statusline 資料由 Claude Code 在本機以 JSON stdin 呼叫使用者設定的 command。Monitor 啟動時不讀 `~/.claude/settings.json`；使用者在 Claude 卡片確認本機檢查後才辨識來源狀態。啟用時先建立 recovery journal 和完整檔案備份，再保留其他 JSON 欄位並以原子寫入加入隨附 helper；新建 settings 使用 no-overwrite move，既有的自訂 `statusLine` 會阻止寫入。helper 只傳合法的 `five_hour`、`seven_day` rate limits 欄位或固定安全錯誤碼，不轉送任意原始值；設定後 15 分鐘未收到資料會逾時，最後成功資料超過 15 分鐘則標為過期。
 
 ## 刷新與狀態
 

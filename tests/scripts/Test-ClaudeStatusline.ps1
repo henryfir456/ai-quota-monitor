@@ -36,3 +36,21 @@ if ($LASTEXITCODE -ne 0 -or ($malformedOutput -join "`n") -notmatch 'N/A') {
 if ($malformedOutput -match 'malformed private-input') {
     throw 'Claude statusline helper exposed invalid input in its output.'
 }
+
+$invalidQuotaInput = '{"rate_limits":{"five_hour":{"used_percentage":"PRIVATE_SYNTHETIC_PERCENT"},"seven_day":{"used_percentage":41.2}}}'
+$invalidQuotaOutput = $invalidQuotaInput | & $powerShell -NoProfile -File $helperPath
+if ($LASTEXITCODE -ne 0 -or ($invalidQuotaOutput -join "`n") -notmatch '7d 58\.8%') {
+    throw 'Claude statusline helper did not preserve the valid window while rejecting malformed quota data.'
+}
+if (($invalidQuotaOutput -join "`n") -match 'PRIVATE_SYNTHETIC_PERCENT') {
+    throw 'Claude statusline helper exposed a malformed quota field.'
+}
+
+$unsupportedInput = '{"rate_limits":"PRIVATE_SYNTHETIC_UNSUPPORTED_SHAPE"}'
+$unsupportedOutput = $unsupportedInput | & $powerShell -NoProfile -File $helperPath
+if ($LASTEXITCODE -ne 0 -or ($unsupportedOutput -join "`n") -notmatch 'N/A') {
+    throw 'Claude statusline helper did not report an unsupported rate_limits shape as unavailable.'
+}
+if (($unsupportedOutput -join "`n") -match 'PRIVATE_SYNTHETIC_UNSUPPORTED_SHAPE') {
+    throw 'Claude statusline helper exposed an unsupported private input value.'
+}

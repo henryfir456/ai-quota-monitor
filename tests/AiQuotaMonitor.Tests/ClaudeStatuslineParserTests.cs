@@ -74,6 +74,21 @@ public sealed class ClaudeStatuslineParserTests
         Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
     }
 
+    [Fact]
+    public void NonObjectRateLimitWindowIsUnsupportedInsteadOfMissing()
+    {
+        var snapshot = ClaudeStatuslineParser.Parse(
+            "{\"rate_limits\":{\"five_hour\":\"invalid-shape\",\"seven_day\":{\"used_percentage\":41}}}",
+            DateTimeOffset.UtcNow);
+
+        var fiveHour = snapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        var weekly = snapshot.Windows.Single(window => window.WindowId == WindowId.Weekly);
+        Assert.Equal(QuotaStatus.Unsupported, fiveHour.Status);
+        Assert.Equal("unsupported_statusline_data", fiveHour.ErrorCode);
+        Assert.Null(fiveHour.RemainingPercent);
+        Assert.Equal(59d, weekly.RemainingPercent);
+    }
+
     [Theory]
     [InlineData(0d, 100d)]
     [InlineData(100d, 0d)]

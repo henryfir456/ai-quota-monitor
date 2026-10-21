@@ -12,7 +12,7 @@
 
 - 不讀取 OAuth／憑證檔，不實作登入、refresh、修復、CLI 安裝、付費推論、遠端更新或遙測。
 - Codex 只呼叫已文件化的 `account/read`（`refreshToken=false`）與唯讀 app-server `account/rateLimits/read`。登入探測只判斷 `account` 是否為 null，不保留 account 欄位。子程序只收到必要 OS 路徑環境變數，stderr 丟棄、原始 RPC 錯誤不顯示，讀取後終止。
-- Claude 使用官方 statusline JSON；啟用設定必須由使用者明確確認。Monitor 讀取現有 `settings.json` 檢查衝突，確認後才建立完整本機備份及加入 helper；既有 `statusLine` 不覆寫，復原只移除未被修改的 Monitor entry。named pipe 限目前 Windows 使用者，helper 只傳允許欄位或固定安全錯誤碼。
+- Claude 使用官方 statusline JSON；Monitor 啟動時不讀取 `settings.json`。使用者明確確認本機檢查後才讀取設定；若要新增 helper，會先建立完整本機備份。既有 `statusLine` 不覆寫，復原只移除未被修改的 Monitor entry。named pipe 限目前 Windows 使用者，helper 只傳合法額度欄位或固定安全錯誤碼，不轉送任意原始字串。
 - 所有 provider 輸入都視為不可信；無效／未知欄位不推測額度或時間。
 - NuGet 套件版本固定，Windows restore 啟用 NuGet vulnerability audit；CI 另執行 Gitleaks。fixture 僅使用合成內容。
 

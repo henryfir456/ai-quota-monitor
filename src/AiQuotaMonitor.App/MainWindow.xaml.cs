@@ -32,7 +32,11 @@ public partial class MainWindow : Window
         _smokeReadyFile = smokeReadyFile;
         var claudeSetupState = smokeTest
             ? new ClaudeStatuslineSetupState("statusline_not_configured", "設定 Claude 額度來源", false, false)
-            : (_claudeStatuslineSetup = new ClaudeStatuslineSetupService()).Inspect();
+            : new ClaudeStatuslineSetupState("claude_settings_not_inspected", "檢查／設定 Claude 額度來源", false, false);
+        if (!smokeTest)
+        {
+            _claudeStatuslineSetup = new ClaudeStatuslineSetupService();
+        }
         _viewModel = new MainViewModel(
             smokeSettingsPath is null ? null : new SettingsStore(smokeSettingsPath),
             claudeSetupState.ErrorCode,
@@ -181,7 +185,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        var inspectionConsent = MessageBox.Show(
+            this,
+            "為檢查 Claude Code 的 statusLine，Monitor 需要在本機讀取 ~/.claude/settings.json。檔案可能含私人設定；內容不會顯示或傳送。若沒有設定衝突並繼續，Monitor 會先完整備份原檔，再加入本機 helper；自訂 statusLine、格式錯誤或權限問題會停止。Monitor 不會安裝 CLI、登入或觸發推論。要繼續檢查嗎？",
+            "檢查 Claude 額度來源",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+        if (inspectionConsent != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
         var state = _claudeStatuslineSetup.Inspect();
+        _viewModel.UpdateClaudeStatuslineState(state.ErrorCode, state.ButtonText);
         ClaudeStatuslineSetupResult result;
         if (state.CanRollback)
         {
@@ -198,27 +214,8 @@ public partial class MainWindow : Window
 
             result = _claudeStatuslineSetup.Rollback();
         }
-        else if (state.HasExistingStatusline)
-        {
-            result = _claudeStatuslineSetup.Configure();
-        }
         else
         {
-            var missingCli = state.ErrorCode == "claude_cli_not_found";
-            var prompt = missingCli
-                ? "找不到 Claude Code CLI。Monitor 可以先準備官方 statusline 設定，但要安裝 Claude Code 後才會有輸入。若 settings.json 已存在，會先將完整原檔備份在本機；若不存在，Monitor 會建立最小設定檔。如果發現自訂 statusLine，Monitor 會停止且不覆寫。要繼續嗎？"
-                : "Monitor 會將本機 Claude helper 設為官方 statusline。若 settings.json 已存在，會先將完整原檔備份在本機；若不存在，Monitor 會建立最小設定檔。若已有自訂 statusLine，設定會停止且原檔不變。Claude 只有在官方 JSON 回報 rate_limits 欄位時才會顯示額度。要繼續嗎？";
-            var answer = MessageBox.Show(
-                this,
-                prompt,
-                "設定 Claude 額度來源",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information);
-            if (answer != MessageBoxResult.Yes)
-            {
-                return;
-            }
-
             result = _claudeStatuslineSetup.Configure();
         }
 

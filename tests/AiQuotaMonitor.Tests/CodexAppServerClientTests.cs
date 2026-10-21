@@ -18,10 +18,12 @@ public sealed class CodexAppServerClientTests
         var response = await CodexAppServerClient.ReadRateLimitsFromRpcAsync(connection, CancellationToken.None);
         var sentRequests = writer.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
+        Assert.Equal(4, sentRequests.Length);
         Assert.Contains("\"capabilities\":{\"experimentalApi\":true}", sentRequests[0], StringComparison.Ordinal);
-        Assert.Contains("\"method\":\"account/read\"", sentRequests[1], StringComparison.Ordinal);
-        Assert.Contains("\"refreshToken\":false", sentRequests[1], StringComparison.Ordinal);
-        Assert.Contains("\"method\":\"account/rateLimits/read\"", sentRequests[2], StringComparison.Ordinal);
+        Assert.Contains("\"method\":\"initialized\"", sentRequests[1], StringComparison.Ordinal);
+        Assert.Contains("\"method\":\"account/read\"", sentRequests[2], StringComparison.Ordinal);
+        Assert.Contains("\"refreshToken\":false", sentRequests[2], StringComparison.Ordinal);
+        Assert.Contains("\"method\":\"account/rateLimits/read\"", sentRequests[3], StringComparison.Ordinal);
         Assert.DoesNotContain("synthetic@example.invalid", response, StringComparison.Ordinal);
     }
 
@@ -38,7 +40,10 @@ public sealed class CodexAppServerClientTests
         var exception = await Assert.ThrowsAsync<CodexNotLoggedInException>(() =>
             CodexAppServerClient.ReadRateLimitsFromRpcAsync(connection, CancellationToken.None));
 
-        Assert.Equal(2, writer.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
+        var sentRequests = writer.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(3, sentRequests.Length);
+        Assert.Contains("\"method\":\"account/read\"", sentRequests[2], StringComparison.Ordinal);
+        Assert.DoesNotContain("account/rateLimits/read", writer.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("Token", exception.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 

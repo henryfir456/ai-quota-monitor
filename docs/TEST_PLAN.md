@@ -37,7 +37,7 @@ Issue #9 / PR #10 新增 Gate 已在程式來源 SHA `61b64cef0f58ec16064e321369
 | Claude unconfigured / uninstalled | provider 初始狀態與 executable locator | 分別顯示未設定、找不到 CLI；不啟動 Claude | NOT RUN · xUnit |
 | Claude parse failure / unsupported shape | malformed JSON 與非 object JSON 經 helper/parser | 顯示解析失敗或未支援；不外洩原文、不保留數字 | NOT RUN · xUnit + Windows PowerShell |
 | Claude no-input timeout / old success | 設定後超過 15 分鐘無 pipe 輸入；成功資料超過 freshness window | 前者顯示逾時；後者顯示過期並保留最後成功時間 | NOT RUN · xUnit |
-| Claude settings configure / conflict / rollback | 暫存使用者 profile 與合成 `settings.json` | 確認後備份並保留其他設定；遇衝突不覆寫；復原只刪 Monitor entry；helper 使用 PS 5.1 可讀 BOM | NOT RUN · xUnit |
+| Claude settings configure / conflict / rollback | 暫存使用者 profile、合成 `settings.json` 與 Windows ACL | 啟動時不讀設定；同意檢查後讀取；不可讀檔不能誤判為不存在；復原 journal 先於設定寫入；新檔 no-overwrite；衝突保留其他設定；helper 使用 PS 5.1 可讀 BOM | NOT RUN · Windows xUnit |
 | Codex success | 官方 initialize/account/read/rateLimits JSONL 合成回應 | `experimentalApi=true`、`refreshToken=false`、期限映射正確；回應不保留帳號識別 | NOT RUN · xUnit |
 | Codex uninstalled / not logged in | locator no-match 與 `account:null` 合成 RPC | 顯示未安裝／未登入並提供建議；不嘗試登入或額度推測 | NOT RUN · xUnit |
 | Codex parse failure / timeout / unsupported | malformed response、provider timeout、RPC -32601、未知窗口 schema | 各自顯示明確狀態；百分比保持 N/A | NOT RUN · xUnit |

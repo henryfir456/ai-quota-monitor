@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -61,6 +62,16 @@ public sealed class ClaudeStatuslineSetupService
             return new("settings_read_failure", "檢查 Claude 設定", false, false);
         }
 
+        if (!settings.ContainsKey("statusLine") && TryReadJournal(out _))
+        {
+            return new("statusline_setup_incomplete", "復原未完成的 Claude 設定", true, false);
+        }
+
+        if (!settings.ContainsKey("statusLine") && JournalPathExists())
+        {
+            return new("setup_journal_unreadable", "檢查 Claude 設定記錄", false, false);
+        }
+
         if (settings.TryGetPropertyValue("statusLine", out var statusLine))
         {
             var command = ReadCommand(statusLine);
@@ -98,14 +109,15 @@ public sealed class ClaudeStatuslineSetupService
     public ClaudeStatuslineSetupResult Configure()
     {
         byte[]? originalBytes = null;
-        var settingsExisted = File.Exists(SettingsPath);
+        var settingsExisted = false;
         JsonObject settings;
         try
         {
+            settingsExisted = TryReadFileIfPresent(SettingsPath, out var currentSettingsBytes);
             if (settingsExisted)
             {
-                originalBytes = File.ReadAllBytes(SettingsPath);
-                settings = ParseSettings(originalBytes);
+                originalBytes = currentSettingsBytes;
+                settings = ParseSettings(currentSettingsBytes);
             }
             else
             {
@@ -119,6 +131,16 @@ public sealed class ClaudeStatuslineSetupService
         catch (Exception exception) when (IsFileAccessFailure(exception))
         {
             return new("settings_read_failure", "無法安全讀取 Claude settings.json；檔案未修改。請檢查檔案權限後重試。");
+        }
+
+        if (!settings.ContainsKey("statusLine") && TryReadJournal(out _))
+        {
+            return new("statusline_setup_incomplete", "已有未完成的 Claude 額度設定記錄。請先復原或檢查該設定，再重新設定。");
+        }
+
+        if (!settings.ContainsKey("statusLine") && JournalPathExists())
+        {
+            return new("setup_journal_unreadable", "Claude 額度設定記錄無法安全讀取；為避免覆寫，Monitor 未修改設定。");
         }
 
         if (settings.ContainsKey("statusLine"))
@@ -145,6 +167,8 @@ public sealed class ClaudeStatuslineSetupService
         var command = CreateCommand(helperPath);
         byte[]? updatedSettings = null;
         var settingsCommitted = false;
+        byte[]? journalBytes = null;
+        var journalWritten = false;
 
         try
         {
@@ -169,7 +193,7 @@ public sealed class ClaudeStatuslineSetupService
                 EnsureUnchanged(SettingsPath, originalBytes!);
                 backupPath = CreateBackup(originalBytes!);
             }
-            else if (File.Exists(SettingsPath))
+            else if (TryReadFileIfPresent(SettingsPath, out _))
             {
                 if (helperCreated)
                 {
@@ -189,7 +213,7 @@ public sealed class ClaudeStatuslineSetupService
             {
                 EnsureUnchanged(SettingsPath, originalBytes!);
             }
-            else if (File.Exists(SettingsPath))
+            else if (TryReadFileIfPresent(SettingsPath, out _))
             {
                 if (helperCreated)
                 {
@@ -199,10 +223,24 @@ public sealed class ClaudeStatuslineSetupService
                 return new("settings_changed_during_setup", "Claude settings.json 在設定期間被其他程式建立。為避免覆蓋，Monitor 未修改該檔案；請重新檢查後再試。");
             }
 
-            WriteAtomic(SettingsPath, updatedSettings);
+            var journal = new SetupJournal(
+                settingsExisted,
+                backupPath,
+                command,
+                originalBytes is null ? null : Convert.ToHexString(SHA256.HashData(originalBytes)));
+            journalBytes = JsonSerializer.SerializeToUtf8Bytes(journal, JsonOptions);
+            WriteAtomicNew(JournalPath, journalBytes);
+            journalWritten = true;
+
+            if (settingsExisted)
+            {
+                WriteAtomic(SettingsPath, updatedSettings);
+            }
+            else
+            {
+                WriteAtomicNew(SettingsPath, updatedSettings);
+            }
             settingsCommitted = true;
-            var journal = new SetupJournal(settingsExisted, backupPath, command);
-            WriteAtomic(JournalPath, JsonSerializer.SerializeToUtf8Bytes(journal, JsonOptions));
             return new("configured", settingsExisted
                 ? "Claude Code 官方 statusline 已設定，原 settings.json 已建立本機備份。只有 Claude Code 提供 rate_limits 欄位時才會顯示額度；可用同一按鈕復原設定。"
                 : "Claude Code 官方 statusline 已設定。沒有既有設定需要備份；只有 Claude Code 提供 rate_limits 欄位時才會顯示額度。可用同一按鈕復原設定。");
@@ -219,6 +257,11 @@ public sealed class ClaudeStatuslineSetupService
                 DeleteIfMatches(helperPath, helperBytes);
             }
 
+            if (journalWritten && journalBytes is not null)
+            {
+                DeleteIfMatches(JournalPath, journalBytes);
+            }
+
             return new("settings_write_failure", "Claude statusline 設定無法安全寫入；Monitor 已嘗試保留原檔。請檢查檔案權限，必要時使用設定旁的備份後再重試。");
         }
     }
@@ -227,6 +270,11 @@ public sealed class ClaudeStatuslineSetupService
     {
         if (!TryReadJournal(out var journal))
         {
+            if (JournalPathExists())
+            {
+                return new("setup_journal_unreadable", "Claude 額度設定記錄無法安全讀取；Monitor 未修改設定。");
+            }
+
             return new("rollback_not_available", "找不到由 Monitor 建立的 Claude 設定記錄；沒有變更設定。");
         }
 
@@ -234,12 +282,16 @@ public sealed class ClaudeStatuslineSetupService
         JsonObject settings;
         try
         {
-            if (!File.Exists(SettingsPath))
+            if (!TryReadFileIfPresent(SettingsPath, out currentBytes))
             {
-                return new("settings_changed_since_setup", "Claude settings.json 已不存在；Monitor 保留備份且未作其他變更。");
+                if (journal.OriginalSettingsExisted)
+                {
+                    return new("settings_changed_since_setup", "原有 Claude settings.json 已不存在；Monitor 保留本機備份且未自行還原或覆寫。");
+                }
+
+                return CleanupInterruptedSetup(journal);
             }
 
-            currentBytes = File.ReadAllBytes(SettingsPath);
             settings = ParseSettings(currentBytes);
         }
         catch (JsonException)
@@ -253,6 +305,16 @@ public sealed class ClaudeStatuslineSetupService
 
         if (!MatchesInstalledStatusLine(settings["statusLine"], journal.InstalledCommand))
         {
+            if (journal.OriginalSettingsExisted &&
+                journal.OriginalSettingsSha256 is not null &&
+                string.Equals(
+                    Convert.ToHexString(SHA256.HashData(currentBytes)),
+                    journal.OriginalSettingsSha256,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return CleanupInterruptedSetup(journal);
+            }
+
             return new("settings_changed_since_setup", "statusLine 已由你或其他程式修改。為保留新設定，Monitor 未復原或覆寫任何內容。");
         }
 
@@ -270,13 +332,25 @@ public sealed class ClaudeStatuslineSetupService
                 WriteAtomic(SettingsPath, restoredBytes);
             }
 
-            File.Delete(JournalPath);
+            DeleteIfMatches(JournalPath, SerializeJournal(journal));
             return new("restored", "Monitor 加入的 statusLine 已移除；其他設定保留。本機備份檔仍保留，helper 檔也未刪除。");
         }
         catch (Exception exception) when (IsFileAccessFailure(exception))
         {
             return new("settings_write_failure", "Claude 設定無法安全復原；原設定與備份均保留，沒有嘗試覆寫其他內容。");
         }
+    }
+
+    private ClaudeStatuslineSetupResult CleanupInterruptedSetup(SetupJournal journal)
+    {
+        DeleteIfMatches(JournalPath, SerializeJournal(journal));
+        var helperPath = Path.Combine(_monitorDirectory, "claude-statusline.ps1");
+        if (!string.IsNullOrWhiteSpace(_helperContent))
+        {
+            DeleteIfMatches(helperPath, EncodeHelper(_helperContent));
+        }
+
+        return new("restored", "Claude 額度設定尚未完整寫入；Monitor 已清除自己的復原記錄與 helper，沒有修改其他設定。");
     }
 
     private string JournalPath => Path.Combine(_monitorDirectory, "claude-statusline-setup.json");
@@ -329,14 +403,14 @@ public sealed class ClaudeStatuslineSetupService
 
     private JsonObject ReadSettings(out byte[]? bytes)
     {
-        if (!File.Exists(SettingsPath))
+        if (!TryReadFileIfPresent(SettingsPath, out var settingsBytes))
         {
             bytes = null;
             return new JsonObject();
         }
 
-        bytes = File.ReadAllBytes(SettingsPath);
-        return ParseSettings(bytes);
+        bytes = settingsBytes;
+        return ParseSettings(settingsBytes);
     }
 
     private static JsonObject ParseSettings(byte[] bytes)
@@ -357,7 +431,13 @@ public sealed class ClaudeStatuslineSetupService
     {
         try
         {
-            var parsed = JsonSerializer.Deserialize<SetupJournal>(File.ReadAllBytes(JournalPath), JournalOptions);
+            if (!TryReadFileIfPresent(JournalPath, out var journalBytes))
+            {
+                journal = new SetupJournal(false, null, string.Empty, null);
+                return false;
+            }
+
+            var parsed = JsonSerializer.Deserialize<SetupJournal>(journalBytes, JournalOptions);
             if (parsed is not null && !string.IsNullOrWhiteSpace(parsed.InstalledCommand))
             {
                 journal = parsed;
@@ -368,8 +448,20 @@ public sealed class ClaudeStatuslineSetupService
         {
         }
 
-        journal = new SetupJournal(false, null, string.Empty);
+        journal = new SetupJournal(false, null, string.Empty, null);
         return false;
+    }
+
+    private bool JournalPathExists()
+    {
+        try
+        {
+            return TryReadFileIfPresent(JournalPath, out _);
+        }
+        catch (Exception exception) when (IsFileAccessFailure(exception))
+        {
+            return true;
+        }
     }
 
     private static string? ReadCommand(JsonNode? statusLine)
@@ -396,9 +488,31 @@ public sealed class ClaudeStatuslineSetupService
 
     private static void EnsureUnchanged(string path, byte[] expected)
     {
-        if (!File.Exists(path) || !File.ReadAllBytes(path).AsSpan().SequenceEqual(expected))
+        if (!TryReadFileIfPresent(path, out var actual) || !actual.AsSpan().SequenceEqual(expected))
         {
             throw new IOException("Settings changed during the update.");
+        }
+    }
+
+    private static bool TryReadFileIfPresent(string path, out byte[] bytes)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var buffer = new MemoryStream();
+            stream.CopyTo(buffer);
+            bytes = buffer.ToArray();
+            return true;
+        }
+        catch (FileNotFoundException)
+        {
+            bytes = [];
+            return false;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            bytes = [];
+            return false;
         }
     }
 
@@ -427,6 +541,28 @@ public sealed class ClaudeStatuslineSetupService
             }
         }
     }
+
+    private static void WriteAtomicNew(string path, byte[] bytes)
+    {
+        var directory = Path.GetDirectoryName(path) ?? throw new IOException("Invalid output path.");
+        Directory.CreateDirectory(directory);
+        var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            WriteNewFile(temporaryPath, bytes);
+            File.Move(temporaryPath, path);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
+
+    private static byte[] SerializeJournal(SetupJournal journal) =>
+        JsonSerializer.SerializeToUtf8Bytes(journal, JsonOptions);
 
     private static void RestoreIfUnchanged(string path, byte[]? original, bool originalExisted, byte[] expected)
     {
@@ -488,5 +624,9 @@ public sealed class ClaudeStatuslineSetupService
         return reader.ReadToEnd();
     }
 
-    private sealed record SetupJournal(bool OriginalSettingsExisted, string? BackupPath, string InstalledCommand);
+    private sealed record SetupJournal(
+        bool OriginalSettingsExisted,
+        string? BackupPath,
+        string InstalledCommand,
+        string? OriginalSettingsSha256);
 }

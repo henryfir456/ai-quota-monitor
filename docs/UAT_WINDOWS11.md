@@ -22,7 +22,7 @@
 | 16 | 系統匣／主視窗暫停與恢復監控 | 暫停停止週期及網路／喚醒自動刷新；進行中的刷新完成後不續排；手動刷新仍可用；恢復時立即刷新 | NOT RUN |
 | 17 | v0.1.1 啟動回歸（歷史） | 使用者已回報 v0.1.1 在 Windows 11 成功啟動；這不證明 quota provider 可用 | PASS · 使用者回報；不延伸推定事件記錄或真實額度狀態 |
 | 18 | 安裝 v0.1.2 prerelease 並雙擊啟動 | 可見主視窗保持開啟；Task Manager 有 `AiQuotaMonitor`；關閉主視窗後程式依既有設計常駐系統匣 | NOT RUN · 等待 v0.1.2 Windows Release Gate；不需上傳事件原文或個人路徑 |
-| 19 | Claude 卡片一鍵設定與復原 | 確認提示說明完整 `settings.json` 本機備份；無衝突時只新增 helper；復原移除 Monitor entry、保留其他設定與備份 | NOT RUN · 使用隔離／可還原的測試設定；不要公開設定內容 |
+| 19 | Claude 卡片檢查同意、一鍵設定與復原 | 啟動時不讀 `settings.json`；按卡片並同意後才檢查；確認提示說明完整本機備份；無衝突時才新增 helper；復原移除 Monitor entry、保留其他設定與備份 | NOT RUN · 使用隔離／可還原的測試設定；不要公開設定內容 |
 | 20 | Claude 已有自訂 statusLine、JSON 壞檔或 helper 路徑衝突 | Monitor 明確顯示衝突／解析原因，不覆寫原檔；備份和復原只觸及 Monitor 管理內容 | NOT RUN |
 | 21 | Claude 真實 statusline 輸入 | 只有官方 `rate_limits.five_hour`／`seven_day` 欄位可用時顯示比例與 reset；欄位缺席時保持 N/A 並給原因 | HUMAN_TEST_PENDING · 不公開真實比例、reset、session 或設定檔 |
 | 22 | Codex CLI 與 Windows Desktop 安裝差異 | Monitor 找到實際安裝的官方 CLI/App Server；既有合法登入可讀 rate limit；不要求 Token、不出現登入或推論操作 | HUMAN_TEST_PENDING · 記錄 app 版本與來源類型，不公開帳號資料 |

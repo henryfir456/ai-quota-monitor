@@ -1,9 +1,6 @@
 name: Windows portable prerelease
 
 on:
-  push:
-    tags:
-      - 'v0.1.2'
   workflow_dispatch:
     inputs:
       release_tag:
@@ -17,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-release-${{ github.ref }}
+  group: windows-release-v0.1.2
   cancel-in-progress: false
 
 jobs:
@@ -39,14 +36,12 @@ jobs:
           DISPATCH_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           $expectedTag = 'v0.1.2'
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            if ($env:GITHUB_REF_NAME -ne 'main') { throw 'Manual prerelease dispatch must run from main.' }
-            if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
-            $existingTag = git ls-remote --tags origin "refs/tags/$expectedTag" "refs/tags/$expectedTag^{}"
-            if ($LASTEXITCODE -ne 0) { throw 'Could not check whether the v0.1.2 tag already exists.' }
-            if ($existingTag) { throw 'Manual prerelease dispatch refuses to replace an existing tag.' }
-          }
-          elseif ($env:GITHUB_REF_NAME -ne $expectedTag) { throw 'Only v0.1.2 may publish this prerelease.' }
+          if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch') { throw 'Only the reviewed manual release path may publish this prerelease.' }
+          if ($env:GITHUB_REF_NAME -ne 'main') { throw 'Manual prerelease dispatch must run from main.' }
+          if ($env:DISPATCH_RELEASE_TAG -ne $expectedTag) { throw 'Manual release tag must be v0.1.2.' }
+          $existingTag = git ls-remote --tags origin "refs/tags/$expectedTag" "refs/tags/$expectedTag^{}"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check whether the v0.1.2 tag already exists.' }
+          if ($existingTag) { throw 'Manual prerelease dispatch refuses to replace an existing tag.' }
           $tagCommit = (git rev-parse HEAD).Trim()
           if ($tagCommit -ne $env:GITHUB_SHA) { throw 'Checked out source SHA differs from release tag SHA.' }
           $mainCommit = (git rev-parse refs/remotes/origin/main).Trim()
@@ -233,15 +228,32 @@ jobs:
               raise SystemExit('Release assets differ from the exact EXE/ZIP tested on Windows.')
           print(f'Windows smoke PASS; verified EXE SHA-256 {exe_hash}; verified ZIP SHA-256 {zip_hash}.')
           PY
-      - name: Create GitHub prerelease after all Windows gates pass
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          target_commitish: ${{ github.sha }}
-          name: AI Quota Monitor v0.1.2 (Windows x64)
-          body_path: artifacts/release/RELEASE_NOTES.md
-          prerelease: true
-          draft: false
-          make_latest: false
-          fail_on_unmatched_files: true
-          files: artifacts/release/*
+      - name: Create exact source tag and GitHub prerelease after every gate passes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" != "workflow_dispatch" || "$GITHUB_REF_NAME" != "main" || "$RELEASE_TAG" != "v0.1.2" ]]; then
+            echo 'Release dispatch must be v0.1.2 from main.' >&2
+            exit 1
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Refusing to replace an existing v0.1.2 tag.' >&2
+            exit 1
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$RELEASE_TAG" \
+            -f "sha=$EXPECTED_SHA" >/dev/null
+          actual_tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')"
+          if [[ "$actual_tag_sha" != "$EXPECTED_SHA" ]]; then
+            echo 'Release tag does not point to the exact Windows-tested source commit.' >&2
+            exit 1
+          fi
+          printf 'Verified release tag %s at tested source %s\n' "$RELEASE_TAG" "$EXPECTED_SHA"
+          gh release create "$RELEASE_TAG" artifacts/release/* \
+            --verify-tag --prerelease \
+            --title 'AI Quota Monitor v0.1.2 (Windows x64)' \
+            --notes-file artifacts/release/RELEASE_NOTES.md

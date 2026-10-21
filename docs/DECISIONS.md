@@ -35,7 +35,7 @@
 
 ## ADR-006｜Claude 官方 statusline opt-in bridge
 - 日期：2026-10-21
-- 決策：提供 PowerShell helper 接收官方 statusline stdin JSON。預設唯讀檢查設定；使用者確認後，完整備份原 `settings.json`、保留其他欄位並加入 helper；遇既有自訂 `statusLine` 或內容變更即停止，並提供只移除未變更 Monitor entry 的復原。
+- 決策：提供 PowerShell helper 接收官方 statusline stdin JSON。Monitor 啟動時不讀 Claude 設定；使用者確認本機檢查後，才辨識來源狀態。使用者確認啟用後，完整備份原 `settings.json`、保留其他欄位並加入 helper；遇既有自訂 `statusLine` 或內容變更即停止，並提供只移除未變更 Monitor entry 的復原。
 - 原因：官方 statusline 是無 Token 的本機資料來源；未配置或欄位未出現時保留 UNKNOWN/N/A。
 - 影響：若使用者已有 statusline command，Monitor 保留原設定且不自動整合；Monitor 不啟動 Claude CLI 或推論。
 

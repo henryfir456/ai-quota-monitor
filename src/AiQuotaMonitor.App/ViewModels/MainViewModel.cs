@@ -55,7 +55,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _claudeProvider.SnapshotUpdated += OnClaudeSnapshotUpdated;
         Providers = new ObservableCollection<ProviderCardViewModel>
         {
-            new(ProviderId.Claude),
+            new(ProviderId.Claude, claudeInitialErrorCode),
             new(ProviderId.Codex)
         };
         _cardsByProvider = Providers.ToDictionary(card => card.ProviderId);

@@ -4,7 +4,7 @@
 
 - 交付：Windows 11 x64 WPF self-contained portable ZIP 與 standalone EXE。
 - 原版：GitHub `v0.1.0` prerelease，保留原 tag 與附件，不覆寫。
-- 修正版目標：GitHub `v0.1.2` prerelease；`.github/workflows/release.yml` 接受 `v0.1.2` tag 或從 `main` 手動 dispatch。dispatch 只在 Windows packaged EXE、反向案例及 SHA-256 Gate 全部通過後，由最後的 Release job 建立 tag/release。
+- 修正版目標：GitHub `v0.1.2` prerelease；`.github/workflows/release.yml` 僅接受 `main` 手動 dispatch。所有 Windows packaged EXE、反向案例及 SHA-256 Gate 通過後，最後的 publisher 才以 GitHub API 原子建立指向已測 `github.sha` 的 tag，再以 `--verify-tag` 建立 Release。
 - stable release、自動更新、安裝器、正式資料變更：不在本次範圍／未授權。
 - 簽章：v0.1.0／v0.1.1／v0.1.2 unsigned；不宣稱發行者簽章、真實 Claude/Codex 帳號驗證或 Windows 11 實機 UAT。
 - 回滾：可在 GitHub 將 prerelease 設為 draft/delete（需維護者執行）；不寫入使用者 CLI 設定或資料。
@@ -21,7 +21,7 @@
 - 同一 SHA 的獨立 reviewer、retrospective、PII_SCAN、README/PRIVACY/SECURITY 與 UAT pending 文件完成。
 - 即時查核 `main` Branch Protection、inherited Rulesets、Required Checks 和 GitHub 權限；Required Checks 的 NOT CONFIGURED 不是 PASS，但明確確認未設定時不額外阻塞。
 - Release workflow 嚴格依序 build → package → Windows smoke test → SHA-256 驗證 → Release。Smoke 必須啟動打包 EXE，檢查可見視窗／應用 UI、readiness JSON、程序穩定存活、Windows Application Event 1000／.NET Runtime Event 1026 與故障反向控制；同一 EXE 和 ZIP 沿用到 SHA 驗證及 Release，不可重新封裝。任何 FAIL／UNKNOWN／cancel／timeout／無證據都阻止後續 Release。
-- GitHub repo mergeability、權限、Required Checks 與所有 Gate 通過後手動 Squash Merge PR。Release dispatch 只能從 `main` 執行、tag 固定為 `v0.1.2` 且不得取代既有 tag；Release job 最後以 `github.sha` 建立 tag/release。v0.1.0 與 v0.1.1 成品不修改、不覆寫。
+- GitHub repo mergeability、權限、Required Checks 與所有 Gate 通過後手動 Squash Merge PR。Release dispatch 只能從 `main` 執行；跨 ref 共用固定 concurrency group，tag 固定為 `v0.1.2` 且既有 tag 一律拒絕。所有 Gate 通過後，publisher 以 GitHub API 建立指向 `github.sha` 的 tag，讀回並核對同一 SHA，再用 `--verify-tag` 建立 Release。v0.1.0 與 v0.1.1 成品不修改、不覆寫。
 
 ## 人工驗收時機
 

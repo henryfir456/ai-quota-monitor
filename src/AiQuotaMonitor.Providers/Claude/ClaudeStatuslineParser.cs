@@ -64,9 +64,14 @@ public static class ClaudeStatuslineParser
         WindowId windowId,
         DateTimeOffset observedAtUtc)
     {
-        if (!limits.TryGetProperty(name, out var window) || window.ValueKind != JsonValueKind.Object)
+        if (!limits.TryGetProperty(name, out var window))
         {
             return New(windowId, null, null, observedAtUtc, QuotaStatus.Unknown, "window_not_reported");
+        }
+
+        if (window.ValueKind != JsonValueKind.Object)
+        {
+            return New(windowId, null, null, observedAtUtc, QuotaStatus.Unsupported, "unsupported_statusline_data");
         }
 
         if (!window.TryGetProperty("used_percentage", out var usedElement) ||

@@ -99,6 +99,50 @@ public sealed class ClaudeStatuslineBridgeTests
         await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
     }
 
+    [Fact]
+    public async Task HelperPreservesInvalidQuotaFieldShapesForSafeParserDiagnostics()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var helperPath = FindHelperPath();
+        var provider = new ClaudeStatuslineProvider();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var hostTask = new ClaudeStatuslinePipeHost(provider).RunAsync(cancellation.Token);
+
+        const string invalidPercent = "PRIVATE_SYNTHETIC_PERCENT";
+        var percentResult = await RunPowerShellAsync(["-File", helperPath],
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":\"" + invalidPercent + "\"},\"seven_day\":{\"used_percentage\":41.2}},\"session_id\":\"PRIVATE_SYNTHETIC_SESSION\"}");
+        Assert.Equal(0, percentResult.ExitCode);
+        Assert.DoesNotContain(invalidPercent, percentResult.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain(invalidPercent, percentResult.Error, StringComparison.Ordinal);
+        var percentSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        var fiveHourWithInvalidPercent = percentSnapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        Assert.Equal(QuotaStatus.Error, fiveHourWithInvalidPercent.Status);
+        Assert.Equal("invalid_used_percent", fiveHourWithInvalidPercent.ErrorCode);
+        Assert.Null(fiveHourWithInvalidPercent.RemainingPercent);
+        Assert.Equal(58.8d, percentSnapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
+
+        const string invalidReset = "PRIVATE_SYNTHETIC_RESET";
+        var resetResult = await RunPowerShellAsync(["-File", helperPath],
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":\"" + invalidReset + "\"},\"seven_day\":{\"used_percentage\":41.2}},\"transcript_path\":\"PRIVATE_SYNTHETIC_PATH\"}");
+        Assert.Equal(0, resetResult.ExitCode);
+        Assert.DoesNotContain(invalidReset, resetResult.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain(invalidReset, resetResult.Error, StringComparison.Ordinal);
+        var resetSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        var fiveHourWithInvalidReset = resetSnapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        Assert.Equal(QuotaStatus.Fresh, fiveHourWithInvalidReset.Status);
+        Assert.Equal("invalid_reset_timestamp", fiveHourWithInvalidReset.ErrorCode);
+        Assert.Equal(76.5d, fiveHourWithInvalidReset.RemainingPercent);
+        Assert.Null(fiveHourWithInvalidReset.ResetAtUtc);
+        Assert.All(resetSnapshot.Windows, window => Assert.DoesNotContain("PRIVATE_SYNTHETIC", window.ErrorCode ?? string.Empty, StringComparison.Ordinal));
+
+        cancellation.Cancel();
+        await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
+    }
+
     private static async Task<(int ExitCode, string Output, string Error)> RunPowerShellAsync(
         IReadOnlyList<string> arguments,
         string input)
