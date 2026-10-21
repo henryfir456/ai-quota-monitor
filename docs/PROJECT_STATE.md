@@ -5,6 +5,13 @@
 
 此文件描述已定義的產品／架構範圍。當前 PR、commit、workflow run、Actions 配額、required checks 與 release 發布狀態以 GitHub 對應頁面為準，不在此複製易過期的結果。
 
+## 本次交付進度
+
+- Issue #1～#7 的程式、設定、README／PRIVACY／SECURITY 與 portable release pipeline 已實作；PR #8 已開啟並關聯全部 Issues。
+- PR run `39540530891` 在 SHA `2ff1fb7909079856cefa6ba7beee4848b09fe3bc` 通過 Windows restore/build、55/55 xUnit、PowerShell helper parser/synthetic input、NuGet vulnerability audit；Ubuntu governance 與 Gitleaks 同樣通過。
+- PR head 後續加強了 PowerShell JSON probe 的 terminating-error handling；該 head 的精確 workflow 尚待完成。尚未合併或建立 v0.1.0 tag/release。
+- Windows 11 x64 實機 UAT 為 `HUMAN_TEST_PENDING`；GitHub `windows-latest` runner 不能代替使用者實機驗收。Actions quota 為 `UNKNOWN`，目前未觀測到配額失敗。
+
 ## 實作範圍
 
 - #1：.NET 8 WPF/MVVM solution、Core quota DTO、provider contract/coordinator、合成單元測試。

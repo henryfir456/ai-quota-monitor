@@ -1,23 +1,32 @@
 # 測試報告
 
-更新日期：2026-10-21。每個結果只適用於表列的完整 commit SHA、runner、命令與 workflow 證據。後續 head 以 PR #8 Checks 為準；Release runner 會將最終 SHA、run URL、TRX 與 UAT 狀態寫入下載的 `TEST_REPORT.txt`。
+更新日期：2026-10-21。下列自動驗證適用於完整 SHA `2ff1fb7909079856cefa6ba7beee4848b09fe3bc`，PR workflow run [39540530891](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540530891)。該 Windows runner 是 GitHub `windows-latest`，不是 Windows 11 使用者裝置。
 
 ## 自動驗證
 
 | 檢查 | 環境／命令 | 結果 | 證據 |
 | --- | --- | --- | --- |
-| 靜態專案／fixture 格式 | Linux · Python 3 XML/YAML/JSON parse | PASS | 12 XML、2 workflow YAML、6 test JSON 可解析；不代表 C# compile |
-| Repository config test | Linux · `node --test tests/agent-loop-config.test.cjs` | PASS | 1 suite passed；不涵蓋需要巢狀 Node process 的其他 suites |
-| Repository governance tests | Ubuntu runner · `node --test tests/*.test.cjs` | PASS on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d`; local sandbox BLOCKED | PR run 39538202866 governance job passed. Local command exits 1 because sandbox denies nested Node subprocesses with `EPERM` |
-| Gitleaks | Ubuntu GitHub Actions，full history | PASS on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d` | PR run 39538202866 governance job passed; earlier Windows installer 404 was avoided by moving scan to Ubuntu |
-| Restore / Release build | Windows runner · `dotnet restore AiQuotaMonitor.sln`; `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d` | PR run 39538202866 `build-and-test` job |
-| Unit tests | Windows runner · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | FAIL on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d` (52 passed / 1 failed); test harness corrected, final head pending | PR run 39538202866 timed out the Claude bridge helper process after 15 seconds; its test environment lacked PowerShell-specific variables. Timeout now kills child and captures sanitized diagnostics |
-| PowerShell helper / NuGet vulnerability audit | Windows runner · `Test-ClaudeStatusline.ps1`; `dotnet list ... --vulnerable --include-transitive` | SKIPPED on SHA `10496a43c520b079f0f5c02d3ee71b94ecef751d`; final head pending | xUnit failure stopped later steps; no helper parser or audit result is inferred |
-| Windows x64 self-contained publish | Release tag workflow | NOT RUN | prerelease workflow 待執行 |
+| Repository governance | Ubuntu · `node --test tests/*.test.cjs` | PASS | run 39540530891 `repository-governance` job |
+| Gitleaks | Ubuntu GitHub Actions，full history | PASS | run 39540530891 `repository-governance` job |
+| Restore | Windows · `dotnet restore AiQuotaMonitor.sln` | PASS | run 39540530891 `build-and-test` job |
+| Release build | Windows · `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS | run 39540530891 `build-and-test` job |
+| xUnit | Windows · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55 passed / 0 failed | run 39540530891; TRX artifact `windows-test-report` |
+| Claude PowerShell helper | Windows PowerShell 5.1 parser and synthetic input | PASS | `Test-ClaudeStatusline.ps1` step in run 39540530891 |
+| NuGet vulnerability audit | Windows · `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · all four projects reported no vulnerable packages | run 39540530891 `List dependency audit` step |
+| Windows x64 publish / release assets | `v0.1.0` release workflow | NOT RUN | awaits reviewed PR merge and authorized prerelease tag |
+| Windows 11 device UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 physical device was available |
+
+The next PR head strengthens the isolated PowerShell JSON probe with terminating-error handling; its exact-head workflow remains pending. Do not treat this SHA as evidence for a later head.
+
+## Earlier issues repaired
+
+- Gitleaks' Windows installer URL returned HTTP 404 before scanning; the pinned scan now runs in the Ubuntu governance job.
+- Windows compilation and test-compilation failures were fixed and covered by the later successful build.
+- PowerShell bridge tests initially timed out because implicit `Microsoft.PowerShell.Utility` command discovery stalled in the restricted child environment. A same-environment probe isolated module loading; the helper now imports the module explicitly, and the real CurrentUserOnly pipe test passes.
 
 ## 本機環境限制
 
-開發 checkout 位於受限 Linux sandbox；`dotnet` 與 Windows GUI runtime 不存在。Node governance suite 的子程序測試因 sandbox `EPERM` 未能完整執行。本地 restore/build/test、PowerShell 5.1 parser、WPF run、實際 Codex CLI、實際 Claude Code statusline 與 Windows 11 UAT 均未執行。Linux 治理測試或 GitHub Windows runner 結果不得寫成個人 Windows 11 實機通過。Release workflow 會在實際 Windows build 對應的來源 SHA 生成可下載 `TEST_REPORT.txt`，記錄 run URL、TRX 結果與 HUMAN_TEST_PENDING。
+開發 checkout 位於受限 Linux sandbox，沒有 `dotnet`、Windows GUI 或 Windows PowerShell 5.1。Node governance suite 的巢狀程序測試在本機被 sandbox 以 `EPERM` 阻止；Ubuntu CI 已通過完整 suite。本機 XML/YAML/JSON parse 是靜態檢查，不代表 build、test、PowerShell、WPF 執行或 Windows 11 UAT。未執行實際 Codex CLI、Claude Code session 或付費推論。
 
 ## 自動化測試涵蓋
 
@@ -25,9 +34,8 @@
 - 單一來源失敗隔離、每來源 timeout、呼叫者 cancellation。
 - Codex 五小時／每週 duration mapping、weekly-only、0／100%、缺少／毫秒 reset、錯誤百分比、未知 duration、錯誤 bucket、重複視窗和格式錯誤。
 - Codex JSONL notification／response id correlation、RPC 錯誤訊息不外洩、CLI 未安裝／RPC 不支援／失敗狀態、子程序環境變數 allowlist。
-- Codex child process startup reads only explicit OS/profile environment variable names and does not enumerate the parent process environment.
-- Claude 官方 statusline 欄位、百分比/reset 驗證、缺值狀態立即清除前一筆數值與 15 分鐘過期處理；Windows bridge integration 也驗證缺額度時送出 UNKNOWN/N/A 快照。
+- Claude 官方 statusline 欄位、百分比/reset 驗證、缺值狀態立即清除前一筆數值與 15 分鐘過期處理；Windows integration 以合成輸入驗證 CurrentUserOnly pipe allowlist、未知快照清除及 stdin 子程序環境。
 - 設定 JSON atomic save、壞檔／未知 schema fallback、敏感欄位不存在、有效值範圍與浮動面板置頂偏好。
 - 監控暫停政策：停止排程與 lifecycle refresh、禁止低額提醒、仍允許手動刷新；對應 tray／resume 實機項目在 UAT #16。
 
-測試不接觸真實 Token、帳號、供應商網路或付費推論。
+自動測試只使用合成 JSON，不接觸真實 Token、帳號、供應商網路或付費推論。CI PASS 不替代 Windows 11 互動 UAT。
