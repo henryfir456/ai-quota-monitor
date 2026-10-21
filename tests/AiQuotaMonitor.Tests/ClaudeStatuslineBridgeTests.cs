@@ -62,8 +62,7 @@ public sealed class ClaudeStatuslineBridgeTests
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var hostTask = new ClaudeStatuslinePipeHost(provider).RunAsync(cancellation.Token);
         var result = await RunPowerShellAsync(["-File", helperPath],
-            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}",
-            enableTestTrace: true);
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}");
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("5h 76.5%", result.Output);
@@ -91,8 +90,7 @@ public sealed class ClaudeStatuslineBridgeTests
 
     private static async Task<(int ExitCode, string Output, string Error)> RunPowerShellAsync(
         IReadOnlyList<string> arguments,
-        string input,
-        bool enableTestTrace = false)
+        string input)
     {
         var powershellPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
@@ -129,10 +127,6 @@ public sealed class ClaudeStatuslineBridgeTests
         var powerShellHome = Path.GetDirectoryName(powershellPath)!;
         startInfo.Environment["PSHOME"] = powerShellHome;
         startInfo.Environment["PSModulePath"] = Path.Combine(powerShellHome, "Modules");
-        if (enableTestTrace)
-        {
-            startInfo.Environment["AI_QUOTA_MONITOR_TEST_TRACE"] = "1";
-        }
 
         using var process = new Process { StartInfo = startInfo };
         Assert.True(process.Start());
