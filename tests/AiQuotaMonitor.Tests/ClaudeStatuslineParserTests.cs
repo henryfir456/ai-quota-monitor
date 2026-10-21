@@ -82,4 +82,17 @@ public sealed class ClaudeStatuslineParserTests
         Assert.All(stale.Windows, window => Assert.Equal(QuotaStatus.Stale, window.Status));
         Assert.Equal(77d, stale.Windows.Single(window => window.WindowId == WindowId.FiveHour).RemainingPercent);
     }
+
+    [Fact]
+    public async Task MissingRateLimitsReplacePreviousFreshSnapshotImmediately()
+    {
+        var provider = new ClaudeStatuslineProvider();
+        provider.Accept("""{"rate_limits":{"five_hour":{"used_percentage":23},"seven_day":{"used_percentage":41}}}""");
+
+        provider.Accept("""{"rate_limits":{}}""");
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Null(window.RemainingPercent));
+    }
 }

@@ -5,7 +5,7 @@
 | Gate | 命令／方法 | 狀態 | 證據 |
 | --- | --- | --- | --- |
 | Repository policy regression | Ubuntu · `node --test tests/*.test.cjs` | BLOCKED locally; CI pending | Sandbox prevented nested process execution (`EPERM`); CI job added |
-| Secret scan | Gitleaks GitHub Action，完整 repo history | NOT RUN | 等 Windows Actions PR run |
+| Secret scan | Gitleaks GitHub Action，完整 repo history on Ubuntu | FAILED on initial Windows attempt; new Ubuntu run pending | Run 39535818420 hit Windows installer URL 404 before scanning; moved to Ubuntu job |
 | NuGet vulnerability audit | `dotnet restore AiQuotaMonitor.sln`，NU1901–NU1904 視為錯誤 | NOT RUN | 等 Windows Actions PR run |
 | 合成資料洩漏 regression | `dotnet test AiQuotaMonitor.sln -c Release`；RPC error message 與子程序環境 allowlist 測試只含 synthetic values | NOT RUN | 等 Windows Actions PR run |
 | Codex schema parser | synthetic JSON fixture tests | NOT RUN | 等 Windows Actions PR run |

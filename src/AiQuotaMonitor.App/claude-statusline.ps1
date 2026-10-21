@@ -2,9 +2,26 @@
 $maximumInputLength = 1048576
 $pipeName = 'AiQuotaMonitor.ClaudeStatusline.v1'
 
+function Send-QuotaSnapshot($windows) {
+    $minimalPayload = @{ rate_limits = $windows } | ConvertTo-Json -Compress -Depth 5
+    try {
+        $pipe = [System.IO.Pipes.NamedPipeClientStream]::new('.', $pipeName, [System.IO.Pipes.PipeDirection]::Out)
+        $pipe.Connect(100)
+        $encoding = [System.Text.UTF8Encoding]::new($false)
+        $writer = [System.IO.StreamWriter]::new($pipe, $encoding, 1024, $true)
+        $writer.WriteLine($minimalPayload)
+        $writer.Flush()
+        $writer.Dispose()
+        $pipe.Dispose()
+    } catch {
+        # Statusline output still works when the monitor is closed.
+    }
+}
+
 try {
     $rawInput = [Console]::In.ReadToEnd()
     if ($null -eq $rawInput -or $rawInput.Length -gt $maximumInputLength) {
+        Send-QuotaSnapshot @{}
         Write-Output 'Claude 額度：N/A'
         exit 0
     }
@@ -38,27 +55,17 @@ try {
     }
 
     if ($windows.Count -eq 0) {
+        Send-QuotaSnapshot @{}
         Write-Output 'Claude 額度：N/A'
         exit 0
     }
 
-    $minimalPayload = @{ rate_limits = $windows } | ConvertTo-Json -Compress -Depth 5
-    try {
-        $pipe = [System.IO.Pipes.NamedPipeClientStream]::new('.', $pipeName, [System.IO.Pipes.PipeDirection]::Out)
-        $pipe.Connect(100)
-        $encoding = [System.Text.UTF8Encoding]::new($false)
-        $writer = [System.IO.StreamWriter]::new($pipe, $encoding, 1024, $true)
-        $writer.WriteLine($minimalPayload)
-        $writer.Flush()
-        $writer.Dispose()
-        $pipe.Dispose()
-    } catch {
-        # Statusline output still works when the monitor is closed.
-    }
+    Send-QuotaSnapshot $windows
 
     Write-Output ('Claude 額度：' + ($display -join ' · '))
     exit 0
 } catch {
+    Send-QuotaSnapshot @{}
     Write-Output 'Claude 額度：N/A'
     exit 0
 }

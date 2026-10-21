@@ -70,7 +70,7 @@ dotnet build AiQuotaMonitor.sln -c Release --no-restore
 dotnet test AiQuotaMonitor.sln -c Release --no-build
 ```
 
-Windows CI 另執行 Gitleaks、PowerShell helper parser／合成輸入驗證與 NuGet vulnerability audit。CI artifact 及實際測試命令見 [測試報告](docs/TEST_REPORT.md)；測試 fixture 全為合成資料。Linux build、CI PASS、靜態檢查和 source review 均不能替代 Windows 11 雙擊、關閉、系統匣、DPI、CLI 版本與真實來源 UAT。
+Windows CI 執行 PowerShell helper parser／合成輸入驗證與 NuGet vulnerability audit；完整歷史 Gitleaks 掃描與 repository governance tests 在 Ubuntu job 執行。CI artifact 及實際測試命令見 [測試報告](docs/TEST_REPORT.md)；測試 fixture 全為合成資料。Linux build、CI PASS、靜態檢查和 source review 均不能替代 Windows 11 雙擊、關閉、系統匣、DPI、CLI 版本與真實來源 UAT。
 
 ## 專案文件
 

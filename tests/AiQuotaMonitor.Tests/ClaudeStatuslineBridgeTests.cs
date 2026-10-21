@@ -21,6 +21,35 @@ public sealed class ClaudeStatuslineBridgeTests
         var provider = new ClaudeStatuslineProvider();
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var hostTask = new ClaudeStatuslinePipeHost(provider).RunAsync(cancellation.Token);
+        var result = await RunHelperAsync(helperPath,
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}");
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("5h 76.5%", result.Output);
+        Assert.Contains("7d 58.8%", result.Output);
+        Assert.False(result.Output.Contains("SYNTHETIC_SESSION_ONLY", StringComparison.Ordinal));
+        Assert.False(result.Output.Contains("SYNTHETIC_PATH_ONLY", StringComparison.Ordinal));
+        Assert.False(result.Error.Contains("SYNTHETIC_SESSION_ONLY", StringComparison.Ordinal));
+        Assert.False(result.Error.Contains("SYNTHETIC_PATH_ONLY", StringComparison.Ordinal));
+
+        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        Assert.Equal(76.5d, snapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour).RemainingPercent);
+        Assert.Equal(58.8d, snapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
+
+        var unavailable = await RunHelperAsync(helperPath, "{\"rate_limits\":{}}");
+        Assert.Equal(0, unavailable.ExitCode);
+        Assert.Contains("N/A", unavailable.Output);
+
+        var clearedSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        Assert.All(clearedSnapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
+        Assert.All(clearedSnapshot.Windows, window => Assert.Null(window.RemainingPercent));
+
+        cancellation.Cancel();
+        await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
+    }
+
+    private static async Task<(int ExitCode, string Output, string Error)> RunHelperAsync(string helperPath, string input)
+    {
         var powershellPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             "WindowsPowerShell", "v1.0", "powershell.exe");
@@ -52,26 +81,10 @@ public sealed class ClaudeStatuslineBridgeTests
         Assert.True(process.Start());
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
-        await process.StandardInput.WriteAsync(
-            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}");
+        await process.StandardInput.WriteAsync(input);
         process.StandardInput.Close();
         await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(15));
-        var output = await outputTask;
-        var error = await errorTask;
-        cancellation.Cancel();
-        await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
-
-        Assert.Equal(0, process.ExitCode);
-        Assert.Contains("5h 76.5%", output);
-        Assert.Contains("7d 58.8%", output);
-        Assert.False(output.Contains("SYNTHETIC_SESSION_ONLY", StringComparison.Ordinal));
-        Assert.False(output.Contains("SYNTHETIC_PATH_ONLY", StringComparison.Ordinal));
-        Assert.False(error.Contains("SYNTHETIC_SESSION_ONLY", StringComparison.Ordinal));
-        Assert.False(error.Contains("SYNTHETIC_PATH_ONLY", StringComparison.Ordinal));
-
-        var snapshot = await provider.GetSnapshotAsync(CancellationToken.None);
-        Assert.Equal(76.5d, snapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour).RemainingPercent);
-        Assert.Equal(58.8d, snapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
+        return (process.ExitCode, await outputTask, await errorTask);
     }
 
     private static string FindHelperPath()

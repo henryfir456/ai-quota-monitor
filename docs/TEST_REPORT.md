@@ -15,7 +15,7 @@
 | Unit tests | Windows runner · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | NOT RUN | TRX artifact 待產生 |
 | Claude helper syntax／synthetic input | Windows PowerShell parser + synthetic stdin，驗證僅輸出兩視窗百分比 | NOT RUN | 等 PR Actions |
 | Claude local bridge integration | Windows unit test launches only the bundled helper with synthetic JSON and verifies CurrentUserOnly pipe output | NOT RUN | 等 PR Actions |
-| Gitleaks | Windows GitHub Actions，full history | NOT RUN | 等 PR Actions |
+| Gitleaks | Ubuntu GitHub Actions，full history | FAILED on initial Windows attempt; new Ubuntu run pending | Run 39535818420：Windows installer URL returned 404 before scan; moved to Ubuntu job |
 | Windows x64 self-contained publish | Release tag workflow | NOT RUN | prerelease workflow 待執行 |
 
 ## 本機環境限制
@@ -28,7 +28,7 @@
 - 單一來源失敗隔離、每來源 timeout、呼叫者 cancellation。
 - Codex 五小時／每週 duration mapping、weekly-only、0／100%、缺少／毫秒 reset、錯誤百分比、未知 duration、錯誤 bucket、重複視窗和格式錯誤。
 - Codex JSONL notification／response id correlation、RPC 錯誤訊息不外洩、CLI 未安裝／RPC 不支援／失敗狀態、子程序環境變數 allowlist。
-- Claude 官方 statusline 欄位、百分比/reset 驗證、缺值狀態與 15 分鐘過期處理。
+- Claude 官方 statusline 欄位、百分比/reset 驗證、缺值狀態立即清除前一筆數值與 15 分鐘過期處理；Windows bridge integration 也驗證缺額度時送出 UNKNOWN/N/A 快照。
 - 設定 JSON atomic save、壞檔／未知 schema fallback、敏感欄位不存在及有效值範圍。
 
 測試不接觸真實 Token、帳號、供應商網路或付費推論。

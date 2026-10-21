@@ -33,6 +33,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _started;
     private bool _isCollapsed;
     private int _consecutiveFailures;
+    private bool _refreshAfterCurrent;
     private DateTimeOffset? _lastManualRefreshAt;
     private string _statusMessage = "啟動後立即以唯讀方式查詢；沒有來源資料時顯示 UNKNOWN/N/A。";
 
@@ -201,7 +202,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             IsRefreshing = false;
             OnPropertyChanged(nameof(RefreshCooldownText));
-            ScheduleNextRefresh();
+            if (_refreshAfterCurrent && !_lifetime.IsCancellationRequested)
+            {
+                _refreshAfterCurrent = false;
+                _ = RefreshAsync();
+            }
+            else
+            {
+                _refreshAfterCurrent = false;
+                ScheduleNextRefresh();
+            }
         }
     }
 
@@ -394,7 +404,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher is not null && !dispatcher.HasShutdownStarted)
             {
-                _ = dispatcher.BeginInvoke(new Action(() => _ = RefreshAsync()));
+                _ = dispatcher.BeginInvoke(new Action(RequestLifecycleRefresh));
             }
         }
     }
@@ -406,9 +416,25 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var dispatcher = System.Windows.Application.Current?.Dispatcher;
             if (dispatcher is not null && !dispatcher.HasShutdownStarted)
             {
-                _ = dispatcher.BeginInvoke(new Action(() => _ = RefreshAsync()));
+                _ = dispatcher.BeginInvoke(new Action(RequestLifecycleRefresh));
             }
         }
+    }
+
+    private void RequestLifecycleRefresh()
+    {
+        if (_lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (IsRefreshing)
+        {
+            _refreshAfterCurrent = true;
+            return;
+        }
+
+        _ = RefreshAsync();
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

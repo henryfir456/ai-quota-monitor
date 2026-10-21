@@ -14,7 +14,7 @@
 | Unit test | `dotnet test AiQuotaMonitor.sln -c Release --no-build` | xUnit synthetic DTO/providers/settings/bridge tests；待 Windows runner |
 | Repository governance tests | `node --test tests/*.test.cjs` | Dedicated Ubuntu CI job; local sandbox child-process restrictions prevented a complete local run |
 | Windows PowerShell check | `tests/scripts/Test-ClaudeStatusline.ps1`，workflow `shell: powershell` | 解析所有 `.ps1` 並以 synthetic statusline stdin 執行 helper；待 Windows runner |
-| Secret scan | Gitleaks action SHA pinned | `.github/workflows/ci.yml`；待 Windows Actions |
+| Secret scan | Gitleaks action SHA pinned; full history on Ubuntu | `.github/workflows/ci.yml`；待 PR Actions |
 | Direct app NuGet dependencies | 無第三方 `PackageReference`；Core/Providers 是同 repo project reference | App `.csproj`；self-contained runtime components會出現在 Release SBOM |
 | Test dependencies | Microsoft.NET.Test.Sdk 17.12.0、xunit 2.9.3、xunit.runner.visualstudio 3.0.1 | Test csproj；fixed versions，NuGet audit on restore |
 | GitHub Action pins | checkout `11d596…`、setup-node `49933…`、setup-dotnet `67a357…`、upload-artifact `ea165…`、gitleaks `ff981…`、softprops `3bb127…` | `docs/DEPENDENCIES.md`；commit SHA pins |

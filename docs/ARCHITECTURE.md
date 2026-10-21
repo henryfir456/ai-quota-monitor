@@ -47,4 +47,4 @@ WPF ViewModel ◀── QuotaRefreshService ◀── ProviderSnapshot / QuotaOb
 
 程式不自建網路 endpoint、資料庫、遙測或更新服務。Codex app-server 依它自己的產品實作管理認證與網路呼叫；Claude statusline 是本機資料。設定僅存 UI/刷新/提醒/啟動偏好並採原子寫入，不存 Token、帳號識別或原始 provider 回覆。具體資料處理見 [PRIVACY.md](../PRIVACY.md) 和 [THREAT_MODEL.md](THREAT_MODEL.md)。
 
-Windows CI 執行 restore/build/test、PowerShell 5.1 parser 與 synthetic bridge、NuGet vulnerability audit 及 Gitleaks。tag workflow 產生 self-contained win-x64 EXE、portable ZIP、SBOM、依賴清單、SHA-256 和測試摘要。CI／Release 不等同 Windows 11 個人裝置 UAT。
+Windows CI 執行 restore/build/test、PowerShell 5.1 parser 與 synthetic bridge、NuGet vulnerability audit；Ubuntu job 執行 repository governance tests 和 full-history Gitleaks secret scan。tag workflow 產生 self-contained win-x64 EXE、portable ZIP、SBOM、依賴清單、SHA-256 和測試摘要。CI／Release 不等同 Windows 11 個人裝置 UAT。

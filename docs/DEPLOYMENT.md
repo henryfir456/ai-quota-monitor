@@ -16,7 +16,7 @@
 
 合併與發行前需確認：
 
-- 同一 PR head SHA 的 Windows Actions `dotnet restore/build/test`、PowerShell 5.1 parser/bridge synthetic test、NuGet vulnerability audit、Gitleaks 結果成功。
+- 同一 PR head SHA 的 Ubuntu governance/Gitleaks、Windows Actions `dotnet restore/build/test`、PowerShell 5.1 parser/bridge synthetic test、NuGet vulnerability audit 結果成功。
 - 同一 SHA 的獨立 reviewer、retrospective、PII_SCAN、README/PRIVACY/SECURITY 與 UAT pending 文件完成。
 - 即時查核 `main` Branch Protection、inherited Rulesets、Required Checks 和 GitHub 權限；Required Checks 的 NOT CONFIGURED 不是 PASS，但明確確認未設定時不額外阻塞。
 - GitHub repo mergeable/權限/所有適用內部 Gate 通過後，手動 Squash Merge；tag `v0.1.0` 只指向合併後的 main commit，再由 Windows Release workflow 建立 prerelease。
