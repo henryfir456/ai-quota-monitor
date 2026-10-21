@@ -281,14 +281,6 @@ jobs:
               ;;
             *) echo "Could not establish whether v0.1.2 tag exists (HTTP $tag_status)." >&2; exit 1 ;;
           esac
-          release_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            --header "$auth_header" --header 'Accept: application/vnd.github+json' \
-            --header 'X-GitHub-Api-Version: 2022-11-28' "$api_base/releases/tags/$RELEASE_TAG")"
-          if [[ "$release_status" != "404" ]]; then
-            if [[ "$release_status" == "200" ]]; then echo 'A v0.1.2 release already exists; refusing to replace it.' >&2
-            else echo "Could not establish that no v0.1.2 release exists (HTTP $release_status)." >&2; fi
-            exit 1
-          fi
           if [[ "$tag_present" == false ]]; then
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f "ref=refs/tags/$RELEASE_TAG" \
@@ -300,7 +292,127 @@ jobs:
             exit 1
           fi
           printf 'Verified release tag %s at tested source %s\n' "$RELEASE_TAG" "$EXPECTED_SHA"
-          gh release create "$RELEASE_TAG" artifacts/release/* \
-            --verify-tag --prerelease \
-            --title 'AI Quota Monitor v0.1.2 (Windows x64)' \
-            --notes-file artifacts/release/RELEASE_NOTES.md
+          manifest_path=artifacts/release/SHA256SUMS.txt
+          manifest_sha="$(sha256sum "$manifest_path" | awk '{print $1}')"
+          notes_file="$RUNNER_TEMP/v0.1.2-release-notes.md"
+          {
+            cat artifacts/release/RELEASE_NOTES.md
+            printf '\n\n---\nRelease source SHA: `%s`\nArtifact manifest SHA-256: `%s`\n' "$EXPECTED_SHA" "$manifest_sha"
+          } > "$notes_file"
+
+          release_status="$(curl --silent --show-error --output "$RUNNER_TEMP/release.json" --write-out '%{http_code}' \
+            --header "$auth_header" --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' "$api_base/releases/tags/$RELEASE_TAG")"
+          case "$release_status" in
+            404)
+              gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease \
+                --title 'AI Quota Monitor v0.1.2 (Windows x64)' \
+                --notes-file "$notes_file"
+              release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")"
+              ;;
+            200)
+              release_json="$(cat "$RUNNER_TEMP/release.json")"
+              if [[ "$(jq -r '.draft' <<< "$release_json")" != true ]]; then
+                echo 'A published v0.1.2 Release already exists; refusing to alter it.' >&2
+                exit 1
+              fi
+              release_body="$(jq -r '.body // ""' <<< "$release_json")"
+              grep -Fqx "Release source SHA: \`$EXPECTED_SHA\`" <<< "$release_body" || {
+                echo 'Existing draft source SHA does not match this tested run.' >&2; exit 1;
+              }
+              grep -Fqx "Artifact manifest SHA-256: \`$manifest_sha\`" <<< "$release_body" || {
+                echo 'Existing draft artifact manifest differs from this exact package.' >&2; exit 1;
+              }
+              ;;
+            *) echo "Could not establish v0.1.2 Release state (HTTP $release_status)." >&2; exit 1 ;;
+          esac
+
+          release_id="$(jq -r '.id' <<< "$release_json")"
+          if [[ -z "$release_id" || "$release_id" == null || "$(jq -r '.draft' <<< "$release_json")" != true ]]; then
+            echo 'Could not verify a draft v0.1.2 Release.' >&2
+            exit 1
+          fi
+          release_body="$(jq -r '.body // ""' <<< "$release_json")"
+          grep -Fqx "Release source SHA: \`$EXPECTED_SHA\`" <<< "$release_body" || {
+            echo 'Draft release metadata does not match the tested source SHA.' >&2; exit 1;
+          }
+          grep -Fqx "Artifact manifest SHA-256: \`$manifest_sha\`" <<< "$release_body" || {
+            echo 'Draft release metadata does not match the exact asset manifest.' >&2; exit 1;
+          }
+
+          mapfile -t expected_names < <(python3 - "$manifest_path" <<'PY'
+          import pathlib, re, sys
+          lines = pathlib.Path(sys.argv[1]).read_text(encoding='ascii').splitlines()
+          names = []
+          for line in lines:
+              match = re.fullmatch(r'[0-9a-f]{64}  ([A-Za-z0-9._-]+)', line)
+              if not match:
+                  raise SystemExit('Malformed SHA256SUMS.txt entry.')
+              names.append(match.group(1))
+          if not names or len(names) != len(set(names)):
+              raise SystemExit('SHA256SUMS.txt is empty or contains duplicate asset names.')
+          print('\n'.join(names))
+          PY
+          )
+          expected_json="$(printf '%s\n' "${expected_names[@]}" | jq -R . | jq -s .)"
+          remote_dir="$RUNNER_TEMP/v0.1.2-remote-assets"
+          mkdir -p "$remote_dir"
+          list_release_assets() {
+            gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?per_page=100" | jq -s 'add // []'
+          }
+          verify_remote_names() {
+            local assets_json="$1"
+            jq -e --argjson expected "$expected_json" '
+              ([.[].name] | length == (unique | length)) and
+              ([.[].name] | all(. as $name | $expected | index($name) != null))
+            ' <<< "$assets_json" >/dev/null || {
+              echo 'Draft contains duplicate or unexpected assets.' >&2; exit 1;
+            }
+          }
+
+          assets_json="$(list_release_assets)"
+          verify_remote_names "$assets_json"
+          for name in "${expected_names[@]}"; do
+            local_path="artifacts/release/$name"
+            if [[ ! -f "$local_path" ]]; then echo "Verified Windows artifact is missing: $name" >&2; exit 1; fi
+            remote_present="$(jq -r --arg name "$name" '[.[] | select(.name == $name)] | length' <<< "$assets_json")"
+            if [[ "$remote_present" == 0 ]]; then
+              gh release upload "$RELEASE_TAG" "$local_path"
+            else
+              rm -f "$remote_dir/$name"
+              gh release download "$RELEASE_TAG" --pattern "$name" --dir "$remote_dir"
+              local_sha="$(sha256sum "$local_path" | awk '{print $1}')"
+              remote_sha="$(sha256sum "$remote_dir/$name" | awk '{print $1}')"
+              if [[ "$local_sha" != "$remote_sha" ]]; then
+                echo "Existing draft asset differs from this exact artifact: $name" >&2
+                exit 1
+              fi
+            fi
+            assets_json="$(list_release_assets)"
+            verify_remote_names "$assets_json"
+          done
+
+          remote_count="$(jq 'length' <<< "$assets_json")"
+          if [[ "$remote_count" != "${#expected_names[@]}" ]]; then
+            echo 'Draft does not contain exactly the verified Windows release assets.' >&2
+            exit 1
+          fi
+          for name in "${expected_names[@]}"; do
+            rm -f "$remote_dir/$name"
+            gh release download "$RELEASE_TAG" --pattern "$name" --dir "$remote_dir"
+            local_sha="$(sha256sum "artifacts/release/$name" | awk '{print $1}')"
+            remote_sha="$(sha256sum "$remote_dir/$name" | awk '{print $1}')"
+            if [[ "$local_sha" != "$remote_sha" ]]; then
+              echo "Final draft asset SHA-256 mismatch: $name" >&2
+              exit 1
+            fi
+          done
+
+          published_json="$(gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" \
+            -F draft=false -F prerelease=true)"
+          if [[ "$(jq -r '.draft' <<< "$published_json")" != false || "$(jq -r '.prerelease' <<< "$published_json")" != true ]]; then
+            echo 'GitHub did not confirm publication of the fully verified prerelease.' >&2
+            exit 1
+          fi
+          printf 'Published fully verified v0.1.2 prerelease from %s with %s SHA-256-verified assets.\n' \
+            "$EXPECTED_SHA" "$remote_count"

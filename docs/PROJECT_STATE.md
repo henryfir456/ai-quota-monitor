@@ -9,10 +9,10 @@
 
 - Issue #11 分支 `codex/issue-11-quota-sources` 已完成 v0.1.2 候選實作：Codex initialize 加入 `experimentalApi=true`，以 `account/read`（`refreshToken=false`）辨識未登入，再讀官方額度 RPC；Claude statusline 增加使用者確認、完整本機備份、衝突保護與可復原設定流程。
 - Claude/Codex 卡片與浮動面板呈現來源、最後成功時間、細分狀態、固定錯誤代碼及繁中建議。合成測試覆蓋成功、未設定／未安裝、未登入、解析失敗、逾時和過期；這些資料不是實際帳號額度。
-- 完整 PR head `dcd15329bbb83393d496ec3096276cd6e649c0c2` 的 Windows Server 2025 packaged-EXE gate 與 Ubuntu governance 已於 [Actions run 39573823707](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39573823707) PASS；Windows xUnit 123/123、PowerShell helper/parser、dependency audit、最終 EXE 正向啟動／故意失敗反向測試及同一產物 SHA 驗證通過。EXE SHA-256 `8d4ec404a422ac2961c48867469c04a55522024b175793d802b21b1a58083907`、portable ZIP SHA-256 `619d65c42458e55bf6cceedf8e254042b91f4f599662247c67a13c3ae37e8761`；artifact ID `12334145341`。Windows 11 實機與真實供應商帳號仍待驗證。後續發布觸發器修正仍須通過最新 head 的 CI 與獨立 review。
+- PR head `552a923e2b29a7083af46e0008676d692fd302ae` 的 Windows Server 2025 packaged-EXE gate 與 Ubuntu governance 已於 [Actions run 39575115279](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39575115279) PASS；Windows xUnit 123/123、PowerShell helper/parser、dependency audit、最終 EXE 正向啟動／故意失敗反向測試及同一產物 SHA 驗證通過。EXE SHA-256 `7293627eee6f601c259af9fea860093f7f9e400436c5840e437de7aeab87f65c`、portable ZIP SHA-256 `0d61ef3e0f350386aa09488d02036f460576293adbe14f277ca9f9bfbf7a84f`；artifact ID `12333712633`。此 run 先於本次 draft-resume 發布修正，只能作為應用程式與 smoke gate 的既有證據；最新 head 仍需 CI 與獨立 review。Windows 11 實機與真實供應商帳號仍待驗證。
 - PR #12 的 merge、Release 尚未完成。Windows Runner 已具備本輪 C#／WPF 與最終 packaged EXE 測試證據；Linux 開發環境本身沒有 `dotnet`、`pwsh` 或 GUI，不宣稱本機 Windows 測試。
 - Codex Desktop 實際 package 位置/ACL、已安裝 CLI 版本，以及真實 Claude/Codex 帳號是否提供額度欄位均 `NOT VERIFIED`。Windows 11 真實帳號 UAT 保持 `HUMAN_TEST_PENDING`。
-- Release 建置使用 v0.1.2，入口限定為 `main` 上固定 `v0.1.2` 的手動 `workflow_dispatch`；最終 Release job 依賴 Windows smoke、故障反向案例及 SHA-256 檢查，不先在工作站建立 tag。只有既有 tag 解決後指向相同測試來源 SHA，且尚無同 tag Release 時，才允許續跑中斷的發布。
+- Release 建置使用 v0.1.2，入口限定為 `main` 上固定 `v0.1.2` 的手動 `workflow_dispatch`；最終 publisher 先建立 draft，使用已通過 Windows gate 的同一組附件，比對 manifest 指紋與遠端下載 SHA-256，完整後才公開。中斷只允許同 SHA、同 manifest draft 續跑；不同來源／附件、已發布 Release 或未知狀態均 fail closed。
 
 - v0.1.0 已發布後，使用者在 Windows 11 確認程式啟動崩潰。Issue #9 已記錄唯讀 `QuotaWindowViewModel.ProgressValue` 指向 WPF `ProgressBar.Value` 的預設 TwoWay Binding 為根因；本修正明確將相關 XAML Binding 設為 OneWay。
 - PR #10 原先只有政策文字。本輪同 PR 補上 XAML regression、final-package GUI smoke、故意失敗反向案例、SHA256 成品同一性驗證與 fail-closed Release dependency。
