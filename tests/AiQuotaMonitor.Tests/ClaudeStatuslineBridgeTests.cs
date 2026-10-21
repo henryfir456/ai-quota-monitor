@@ -12,8 +12,24 @@ public sealed class ClaudeStatuslineBridgeTests
         "PATH", "SYSTEMROOT", "WINDIR", "USERPROFILE", "HOMEDRIVE", "HOMEPATH",
         "LOCALAPPDATA", "APPDATA", "TEMP", "TMP", "COMSPEC",
         "PATHEXT", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432",
-        "CommonProgramFiles", "CommonProgramFiles(x86)"
+        "CommonProgramFiles", "CommonProgramFiles(x86)", "SYSTEMDRIVE", "COMPUTERNAME",
+        "USERNAME", "USERDOMAIN", "PROCESSOR_ARCHITECTURE"
     ];
+
+    [Fact]
+    public async Task PowerShellStartsAndConsumesStdinWithAllowlistedEnvironment()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        const string command = "$null = [Console]::In.ReadToEnd(); [Console]::Out.WriteLine('stdin-consumed')";
+        var result = await RunPowerShellAsync(["-Command", command], "synthetic-input");
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("stdin-consumed", result.Output);
+    }
 
     [Fact]
     public async Task PowerShellHelperSendsOnlyQuotaFieldsOverCurrentUserPipe()
@@ -28,7 +44,7 @@ public sealed class ClaudeStatuslineBridgeTests
         var provider = new ClaudeStatuslineProvider();
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var hostTask = new ClaudeStatuslinePipeHost(provider).RunAsync(cancellation.Token);
-        var result = await RunHelperAsync(helperPath,
+        var result = await RunPowerShellAsync(["-File", helperPath],
             "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}");
 
         Assert.Equal(0, result.ExitCode);
@@ -43,7 +59,7 @@ public sealed class ClaudeStatuslineBridgeTests
         Assert.Equal(76.5d, snapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour).RemainingPercent);
         Assert.Equal(58.8d, snapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
 
-        var unavailable = await RunHelperAsync(helperPath, "{\"rate_limits\":{}}");
+        var unavailable = await RunPowerShellAsync(["-File", helperPath], "{\"rate_limits\":{}}");
         Assert.Equal(0, unavailable.ExitCode);
         Assert.Contains("N/A", unavailable.Output);
 
@@ -55,7 +71,9 @@ public sealed class ClaudeStatuslineBridgeTests
         await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
     }
 
-    private static async Task<(int ExitCode, string Output, string Error)> RunHelperAsync(string helperPath, string input)
+    private static async Task<(int ExitCode, string Output, string Error)> RunPowerShellAsync(
+        IReadOnlyList<string> arguments,
+        string input)
     {
         var powershellPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
@@ -68,13 +86,17 @@ public sealed class ClaudeStatuslineBridgeTests
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardInputEncoding = new UTF8Encoding(false),
             StandardOutputEncoding = new UTF8Encoding(false),
             StandardErrorEncoding = new UTF8Encoding(false)
         };
         startInfo.ArgumentList.Add("-NoProfile");
         startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-File");
-        startInfo.ArgumentList.Add(helperPath);
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
         startInfo.Environment.Clear();
         foreach (var name in PowerShellEnvironmentNames)
         {
@@ -85,13 +107,16 @@ public sealed class ClaudeStatuslineBridgeTests
             }
         }
 
-        startInfo.Environment["PSModulePath"] = Path.Combine(Path.GetDirectoryName(powershellPath)!, "Modules");
+        var powerShellHome = Path.GetDirectoryName(powershellPath)!;
+        startInfo.Environment["PSHOME"] = powerShellHome;
+        startInfo.Environment["PSModulePath"] = Path.Combine(powerShellHome, "Modules");
 
         using var process = new Process { StartInfo = startInfo };
         Assert.True(process.Start());
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
-        await process.StandardInput.WriteAsync(input);
+        await process.StandardInput.WriteLineAsync(input);
+        await process.StandardInput.FlushAsync();
         process.StandardInput.Close();
         try
         {
