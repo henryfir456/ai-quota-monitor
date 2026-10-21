@@ -32,6 +32,22 @@ public sealed class ClaudeStatuslineBridgeTests
     }
 
     [Fact]
+    public async Task PowerShellImportsJsonCmdletWithAllowlistedEnvironment()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        const string command = "[Console]::Out.WriteLine('before-json'); Import-Module Microsoft.PowerShell.Utility; [Console]::Out.WriteLine('module-loaded'); $null = '{}' | ConvertFrom-Json; [Console]::Out.WriteLine('json-parsed')";
+        var result = await RunPowerShellAsync(["-Command", command], string.Empty);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("module-loaded", result.Output);
+        Assert.Contains("json-parsed", result.Output);
+    }
+
+    [Fact]
     public async Task PowerShellHelperSendsOnlyQuotaFieldsOverCurrentUserPipe()
     {
         if (!OperatingSystem.IsWindows())
