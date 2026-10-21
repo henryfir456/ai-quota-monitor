@@ -354,6 +354,8 @@ jobs:
           print('\n'.join(names))
           PY
           )
+          # The manifest cannot list its own digest; bind it through draft metadata and verify it separately.
+          expected_names+=("SHA256SUMS.txt")
           expected_json="$(printf '%s\n' "${expected_names[@]}" | jq -R . | jq -s .)"
           remote_dir="$RUNNER_TEMP/v0.1.2-remote-assets"
           mkdir -p "$remote_dir"
@@ -379,12 +381,26 @@ jobs:
             if [[ "$remote_present" == 0 ]]; then
               gh release upload "$RELEASE_TAG" "$local_path"
             else
-              rm -f "$remote_dir/$name"
-              gh release download "$RELEASE_TAG" --pattern "$name" --dir "$remote_dir"
-              local_sha="$(sha256sum "$local_path" | awk '{print $1}')"
-              remote_sha="$(sha256sum "$remote_dir/$name" | awk '{print $1}')"
-              if [[ "$local_sha" != "$remote_sha" ]]; then
-                echo "Existing draft asset differs from this exact artifact: $name" >&2
+              asset_state="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].state // "unknown"' <<< "$assets_json")"
+              if [[ "$asset_state" == starter ]]; then
+                asset_id="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].id // empty' <<< "$assets_json")"
+                if [[ -z "$asset_id" ]]; then echo "Could not identify incomplete draft asset: $name" >&2; exit 1; fi
+                gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" >/dev/null
+                assets_json="$(list_release_assets)"
+                remote_present="$(jq -r --arg name "$name" '[.[] | select(.name == $name)] | length' <<< "$assets_json")"
+                if [[ "$remote_present" != 0 ]]; then echo "Incomplete draft asset could not be removed: $name" >&2; exit 1; fi
+                gh release upload "$RELEASE_TAG" "$local_path"
+              elif [[ "$asset_state" == uploaded ]]; then
+                rm -f "$remote_dir/$name"
+                gh release download "$RELEASE_TAG" --pattern "$name" --dir "$remote_dir"
+                local_sha="$(sha256sum "$local_path" | awk '{print $1}')"
+                remote_sha="$(sha256sum "$remote_dir/$name" | awk '{print $1}')"
+                if [[ "$local_sha" != "$remote_sha" ]]; then
+                  echo "Existing draft asset differs from this exact artifact: $name" >&2
+                  exit 1
+                fi
+              else
+                echo "Draft asset has an unrecognized upload state: $name" >&2
                 exit 1
               fi
             fi
@@ -397,6 +413,9 @@ jobs:
             echo 'Draft does not contain exactly the verified Windows release assets.' >&2
             exit 1
           fi
+          jq -e 'all(.[]; .state == "uploaded")' <<< "$assets_json" >/dev/null || {
+            echo 'Draft contains an incomplete or unknown asset upload state.' >&2; exit 1;
+          }
           for name in "${expected_names[@]}"; do
             rm -f "$remote_dir/$name"
             gh release download "$RELEASE_TAG" --pattern "$name" --dir "$remote_dir"

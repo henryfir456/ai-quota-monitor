@@ -4,7 +4,7 @@
 
 - 交付：Windows 11 x64 WPF self-contained portable ZIP 與 standalone EXE。
 - 原版：GitHub `v0.1.0` prerelease，保留原 tag 與附件，不覆寫。
-- 修正版目標：GitHub `v0.1.2` prerelease；`.github/workflows/release.yml` 只接受 `main` 上固定 `v0.1.2` 的 `workflow_dispatch`。所有 Windows packaged EXE、反向案例及 SHA-256 Gate 通過後，publisher 才建立指向已測 `github.sha` 的 tag 和 draft Release，逐一比對附件名稱與下載後的 SHA-256，最後才公開 prerelease。中斷時只可續用來源 SHA、manifest 指紋相同的 draft 與附件；不同 SHA、不同 manifest、已公開 Release 或 UNKNOWN 狀態均 fail closed。
+- 修正版目標：GitHub `v0.1.2` prerelease；`.github/workflows/release.yml` 只接受 `main` 上固定 `v0.1.2` 的 `workflow_dispatch`。所有 Windows packaged EXE、反向案例及 SHA-256 Gate 通過後，publisher 才建立指向已測 `github.sha` 的 tag 和 draft Release，逐一比對附件名稱、包含 `SHA256SUMS.txt` 在內的每個遠端下載 SHA-256，最後才公開 prerelease。因 manifest 無法包含自己的 hash，draft body 會綁定其 SHA-256。中斷時只可續用來源 SHA、manifest 指紋相同的 draft 與附件；不完整 `starter` 附件會在同一 draft 內刪除後重傳。不同 SHA、不同 manifest、已公開 Release 或 UNKNOWN 狀態均 fail closed。
 - stable release、自動更新、安裝器、正式資料變更：不在本次範圍／未授權。
 - 簽章：v0.1.0／v0.1.1／v0.1.2 unsigned；不宣稱發行者簽章、真實 Claude/Codex 帳號驗證或 Windows 11 實機 UAT。
 - 回滾：可在 GitHub 將 prerelease 設為 draft/delete（需維護者執行）；不寫入使用者 CLI 設定或資料。

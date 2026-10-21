@@ -54,6 +54,11 @@ test('publisher resumes only the exact draft, validates every remote asset, then
   assert.ok(publish > finalHashCheck);
   assert.match(publisher, /Existing draft artifact manifest differs from this exact package/);
   assert.match(publisher, /Existing draft asset differs from this exact artifact/);
+  assert.match(publisher, /expected_names\+=\("SHA256SUMS\.txt"\)/);
+  assert.match(publisher, /manifest_path=artifacts\/release\/SHA256SUMS\.txt/);
+  assert.match(publisher, /local_sha=.*sha256sum "\$local_path"/);
+  assert.match(publisher, /asset_state.*== starter[\s\S]*gh api --method DELETE "repos\/\$GITHUB_REPOSITORY\/releases\/assets\/\$asset_id"/);
+  assert.match(publisher, /all\(\.\[\]; \.state == "uploaded"\)/);
   assert.match(publisher, /A published v0\.1\.2 Release already exists; refusing to alter it/);
   assert.match(publisher, /Published fully verified v0\.1\.2 prerelease/);
   assert.doesNotMatch(publisher, /continue-on-error|always\(\)/);
