@@ -30,6 +30,9 @@ function Send-QuotaSnapshot($windows) {
 }
 
 try {
+    Write-TestTrace 'utility-module-import-start'
+    Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+    Write-TestTrace 'utility-module-import-complete'
     Write-TestTrace 'input-read-start'
     $rawInput = [Console]::In.ReadToEnd()
     Write-TestTrace 'input-read-complete'
