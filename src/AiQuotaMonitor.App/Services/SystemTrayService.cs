@@ -9,14 +9,19 @@ public sealed class SystemTrayService : IDisposable
     private readonly System.Windows.Forms.NotifyIcon _icon;
     private readonly Action _showMainWindow;
     private readonly Action _toggleFloatingPanel;
+    private readonly Action _toggleMainWindowVisibility;
+    private readonly Func<bool> _isMainWindowVisible;
     private readonly Action _toggleMonitoringPause;
     private readonly Action _refresh;
     private readonly Action _openSettings;
     private readonly Action _exit;
+    private readonly System.Windows.Forms.ToolStripMenuItem _mainWindowMenuItem;
     private readonly System.Windows.Forms.ToolStripMenuItem _monitoringMenuItem;
 
     public SystemTrayService(
         Action showMainWindow,
+        Action toggleMainWindowVisibility,
+        Func<bool> isMainWindowVisible,
         Action toggleFloatingPanel,
         Action toggleMonitoringPause,
         Action refresh,
@@ -24,6 +29,8 @@ public sealed class SystemTrayService : IDisposable
         Action exit)
     {
         _showMainWindow = showMainWindow;
+        _toggleMainWindowVisibility = toggleMainWindowVisibility;
+        _isMainWindowVisible = isMainWindowVisible;
         _toggleFloatingPanel = toggleFloatingPanel;
         _toggleMonitoringPause = toggleMonitoringPause;
         _refresh = refresh;
@@ -31,7 +38,10 @@ public sealed class SystemTrayService : IDisposable
         _exit = exit;
 
         var menu = new System.Windows.Forms.ContextMenuStrip();
-        menu.Items.Add("開啟主視窗", null, (_, _) => _showMainWindow());
+        _mainWindowMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+        _mainWindowMenuItem.Click += (_, _) => _toggleMainWindowVisibility();
+        menu.Opening += (_, _) => _mainWindowMenuItem.Text = _isMainWindowVisible() ? "隱藏主視窗" : "顯示主視窗";
+        menu.Items.Add(_mainWindowMenuItem);
         menu.Items.Add("顯示／隱藏精簡面板", null, (_, _) => _toggleFloatingPanel());
         _monitoringMenuItem = new System.Windows.Forms.ToolStripMenuItem("暫停監控");
         _monitoringMenuItem.Click += (_, _) => _toggleMonitoringPause();

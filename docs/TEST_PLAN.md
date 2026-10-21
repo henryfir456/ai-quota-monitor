@@ -2,15 +2,15 @@
 
 | 領域 | 驗證方法 | 狀態 | 證據 |
 | --- | --- | --- | --- |
-| .NET restore/NuGet audit | Windows runner · `dotnet restore AiQuotaMonitor.sln`; NU1901–NU1904 errors | Restore PASS / audit SKIPPED on SHA `7645556fa185c7052d5986efe097d0346cb0c7d5`; final head pending | PR run 39537063633; Windows build failure skipped audit |
-| Repository governance tests | Ubuntu runner · `node --test tests/*.test.cjs` | PASS on SHA `7645556fa185c7052d5986efe097d0346cb0c7d5`; BLOCKED locally | PR run 39537063633; local sandbox denied nested Node processes with `EPERM` |
-| Release build | Windows runner · `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | FAIL on SHA `7645556fa185c7052d5986efe097d0346cb0c7d5`; fix pending CI | PR run 39537063633 failed CS9007 in test JSON literals |
-| xUnit | Windows runner · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | SKIPPED on SHA `7645556fa185c7052d5986efe097d0346cb0c7d5`; final head pending | Build failure skipped test step |
+| .NET restore/NuGet audit | Windows runner · `dotnet restore AiQuotaMonitor.sln`; NU1901–NU1904 errors | Restore PASS / audit SKIPPED on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; final head pending | PR run 39537932515; Windows build failure skipped audit |
+| Repository governance tests | Ubuntu runner · `node --test tests/*.test.cjs` | PASS on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; BLOCKED locally | PR run 39537932515; local sandbox denied nested Node processes with `EPERM` |
+| Release build | Windows runner · `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | FAIL on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; latest fixes pending CI | PR run 39537932515 failed on missing `System.IO` test global using |
+| xUnit | Windows runner · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | SKIPPED on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0`; final head pending | Build failure skipped test step |
 | Codex schema / RPC | synthetic fixture parser, timeout, unsupported, environment allowlist and error redaction tests | NOT RUN | Windows xUnit pending |
 | Claude parser / pipe | official field synthetic fixture; Windows PS 5.1 parser; CurrentUserOnly bridge integration with synthetic session markers | NOT RUN | Windows CI pending |
 | Settings | schema fallback, atomic write, safe default/range, floating-panel topmost preference and no credential fields | NOT RUN | Windows xUnit pending |
 | Monitoring pause | paused scheduled/lifecycle refresh, alert suppression, timer scheduling, manual-refresh allowance and resume behavior | NOT RUN | Windows xUnit pending; tray interaction in UAT #16 |
-| Secret scan | Gitleaks action pinned commit, full history | PASS on SHA `7645556fa185c7052d5986efe097d0346cb0c7d5` | PR run 39537063633 governance job |
+| Secret scan | Gitleaks action pinned commit, full history | PASS on SHA `00ddaa249334a780d9d42f98c7d62d22574f7af0` | PR run 39537932515 governance job |
 | WPF/XAML / WinForms / self-contained publish | Windows Desktop SDK build and v0.1.0 tag publish | NOT RUN | Release workflow pending |
 | Windows 11 x64 GUI / process UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 device available in current environment |
 | Provider real-client matrix | real Codex CLI/Desktop version and user-configured Claude statusline | NOT VERIFIED | no target Windows application versions established |

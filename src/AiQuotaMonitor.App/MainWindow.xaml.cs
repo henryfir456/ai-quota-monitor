@@ -28,6 +28,8 @@ public partial class MainWindow : Window
 
         _trayService = new SystemTrayService(
             showMainWindow: ShowMainWindow,
+            toggleMainWindowVisibility: ToggleMainWindowVisibility,
+            isMainWindowVisible: () => IsVisible,
             toggleFloatingPanel: ToggleFloatingPanel,
             toggleMonitoringPause: () => Dispatch(_viewModel.ToggleMonitoringPause),
             refresh: () => Dispatch(() => _ = _viewModel.RefreshAsync(isManual: true)),
@@ -87,6 +89,24 @@ public partial class MainWindow : Window
     {
         ShowInTaskbar = false;
         Hide();
+    }
+
+    private void ToggleMainWindowVisibility()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatch(ToggleMainWindowVisibility);
+            return;
+        }
+
+        if (IsVisible)
+        {
+            HideMainWindow();
+        }
+        else
+        {
+            ShowMainWindow();
+        }
     }
 
     private void ToggleFloatingPanel()
