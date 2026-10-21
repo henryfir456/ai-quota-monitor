@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Media;
 using AiQuotaMonitor.Core;
+using MediaBrush = System.Windows.Media.Brush;
+using MediaBrushes = System.Windows.Media.Brushes;
 
 namespace AiQuotaMonitor.App.ViewModels;
 
@@ -52,9 +53,9 @@ public sealed class QuotaWindowViewModel : INotifyPropertyChanged
 
     public double? ProgressValue => ShowUsedPercent ? _observation.UsedPercent : _observation.RemainingPercent;
 
-    public Brush ProgressBrush => _observation.Status == QuotaStatus.Fresh && _observation.RemainingPercent is double remaining
-        ? remaining <= 10 ? Brushes.IndianRed : remaining <= 20 ? Brushes.DarkOrange : Brushes.MediumSeaGreen
-        : Brushes.SlateGray;
+    public MediaBrush ProgressBrush => _observation.Status == QuotaStatus.Fresh && _observation.RemainingPercent is double remaining
+        ? remaining <= 10 ? MediaBrushes.IndianRed : remaining <= 20 ? MediaBrushes.DarkOrange : MediaBrushes.MediumSeaGreen
+        : MediaBrushes.SlateGray;
 
     public string StatusText => _observation.Status switch
     {

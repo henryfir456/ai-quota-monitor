@@ -3,23 +3,26 @@ name: Windows portable prerelease
 on:
   push:
     tags:
-      - 'v0.*'
+      - 'v0.1.0'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: windows-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  package-and-release:
+  package-windows:
     runs-on: windows-latest
     timeout-minutes: 40
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 8.0.x
@@ -27,6 +30,11 @@ jobs:
         shell: pwsh
         run: |
           if ($env:GITHUB_REF_NAME -ne 'v0.1.0') { throw 'Only the reviewed v0.1.0 tag may publish this prerelease.' }
+          $tagCommit = (git rev-parse $env:GITHUB_SHA).Trim()
+          $mainCommit = (git rev-parse refs/remotes/origin/main).Trim()
+          git merge-base --is-ancestor $tagCommit $mainCommit
+          if ($LASTEXITCODE -ne 0) { throw 'Release tag must point to a commit already contained in origin/main.' }
+          Write-Output "Verified release commit $tagCommit is contained in main at $mainCommit."
       - name: Restore
         run: dotnet restore AiQuotaMonitor.sln
       - name: Build Release
@@ -74,6 +82,26 @@ jobs:
             -DependencyReportPath $dependencyReport `
             -WorkflowRunUrl $workflowUrl `
             -OutputDirectory (Join-Path $PWD 'artifacts/release')
+      - name: Upload release assets for publisher
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-release-assets
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-prerelease:
+    needs: package-windows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified Windows release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: windows-release-assets
+          path: artifacts/release
       - name: Create GitHub prerelease
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:

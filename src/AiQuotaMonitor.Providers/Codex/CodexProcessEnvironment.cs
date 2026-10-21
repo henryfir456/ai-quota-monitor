@@ -26,4 +26,15 @@ public static class CodexProcessEnvironment
             .Select(group => group.First())
             .ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.OrdinalIgnoreCase);
     }
+
+    public static IReadOnlyDictionary<string, string> ReadAllowed(Func<string, string?> getEnvironmentVariable)
+    {
+        ArgumentNullException.ThrowIfNull(getEnvironmentVariable);
+        return AllowedNames
+            .Select(name => new KeyValuePair<string, string?>(name, getEnvironmentVariable(name)))
+            .Where(pair => !string.IsNullOrEmpty(pair.Value))
+            .ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public static IReadOnlyDictionary<string, string> ReadCurrent() => ReadAllowed(Environment.GetEnvironmentVariable);
 }

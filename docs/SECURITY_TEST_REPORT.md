@@ -4,6 +4,7 @@
 
 | Gate | 命令／方法 | 狀態 | 證據 |
 | --- | --- | --- | --- |
+| Release publish token isolation | Build/package uses `contents:read`; isolated artifact-only publisher receives `contents:write`; checkout credential persistence disabled; only v0.1.0 tag contained in main may proceed | Implemented; verify on final workflow run | `.github/workflows/release.yml` |
 | Repository policy regression | Ubuntu · `node --test tests/*.test.cjs` | BLOCKED locally; CI pending | Sandbox prevented nested process execution (`EPERM`); CI job added |
 | Secret scan | Gitleaks GitHub Action，完整 repo history on Ubuntu | FAILED on initial Windows attempt; new Ubuntu run pending | Run 39535818420 hit Windows installer URL 404 before scanning; moved to Ubuntu job |
 | NuGet vulnerability audit | `dotnet restore AiQuotaMonitor.sln`，NU1901–NU1904 視為錯誤 | NOT RUN | 等 Windows Actions PR run |

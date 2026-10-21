@@ -24,6 +24,7 @@ NuGet 版本固定於 `tests/AiQuotaMonitor.Tests/AiQuotaMonitor.Tests.csproj`�
 | actions/setup-node | `49933ea5288caeca8642d1e84afbd3f7d6820020` | Node 20 repository governance tests |
 | actions/setup-dotnet | `67a3573c9a986a3f9c594539f4ab511d57bb3ce9` | .NET SDK |
 | actions/upload-artifact | `ea165f8d65b6e75b540449e92b4886f43607fa02` | TRX artifact |
+| actions/download-artifact | `d3f86a106a0bac45b974a628896c90dbdf5c8093` | Transfer Windows release assets to the isolated publisher job |
 | gitleaks/gitleaks-action | `ff98106e4c7b2bc287b24eaf42907196329070c7` | Secret scan |
 | softprops/action-gh-release | `3bb12739c298aeb8a4eeaf626c5b8d85266b0e65` | v0 prerelease |
 

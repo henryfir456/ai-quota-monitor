@@ -112,13 +112,13 @@ $archivePath = Join-Path $OutputDirectory ('AiQuotaMonitor-' + $Version + '-win-
 Compress-Archive -Path (Join-Path $stageDirectory '*') -DestinationPath $archivePath -CompressionLevel Optimal
 Remove-Item -LiteralPath $stageDirectory -Recurse -Force
 
+$releaseNotes = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs/RELEASE_NOTES_0.1.0.md') -Raw
+$releaseNotes += "`n`nVersion: $Version`nCommit: $Commit`nWorkflow run: $WorkflowRunUrl`n`nWindows 11 physical-device UAT: HUMAN_TEST_PENDING."
+Set-Content -LiteralPath (Join-Path $OutputDirectory 'RELEASE_NOTES.md') -Value $releaseNotes -Encoding utf8
+
 $sumLines = @()
 Get-ChildItem -LiteralPath $OutputDirectory -File | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object Name | ForEach-Object {
     $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $sumLines += ($hash + '  ' + $_.Name)
 }
 Set-Content -LiteralPath (Join-Path $OutputDirectory 'SHA256SUMS.txt') -Value ($sumLines -join "`n") -Encoding ascii
-
-$releaseNotes = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs/RELEASE_NOTES_0.1.0.md') -Raw
-$releaseNotes += "`n`nVersion: $Version`nCommit: $Commit`nWorkflow run: $WorkflowRunUrl`n`nWindows 11 physical-device UAT: HUMAN_TEST_PENDING."
-Set-Content -LiteralPath (Join-Path $OutputDirectory 'RELEASE_NOTES.md') -Value $releaseNotes -Encoding utf8

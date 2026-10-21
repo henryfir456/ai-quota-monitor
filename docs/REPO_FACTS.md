@@ -17,15 +17,14 @@
 | Secret scan | Gitleaks action SHA pinned; full history on Ubuntu | `.github/workflows/ci.yml`；待 PR Actions |
 | Direct app NuGet dependencies | 無第三方 `PackageReference`；Core/Providers 是同 repo project reference | App `.csproj`；self-contained runtime components會出現在 Release SBOM |
 | Test dependencies | Microsoft.NET.Test.Sdk 17.12.0、xunit 2.9.3、xunit.runner.visualstudio 3.0.1 | Test csproj；fixed versions，NuGet audit on restore |
-| GitHub Action pins | checkout `11d596…`、setup-node `49933…`、setup-dotnet `67a357…`、upload-artifact `ea165…`、gitleaks `ff981…`、softprops `3bb127…` | `docs/DEPENDENCIES.md`；commit SHA pins |
+| GitHub Action pins | checkout `11d596…`、setup-node `49933…`、setup-dotnet `67a357…`、upload-artifact `ea165…`、download-artifact `d3f86…`、gitleaks `ff981…`、softprops `3bb127…` | `docs/DEPENDENCIES.md`；commit SHA pins |
 | Provider sources | Codex official app-server `account/rateLimits/read`; optional Claude official statusline local JSON | `docs/providers/codex-evidence.md`, `claude-evidence.md`; CLI versions UNKNOWN |
 | Token / data paths | No credential file access by Monitor; Codex child receives OS env allowlist; Claude sends two rate-limit windows over current-user pipe | Provider source, security/privacy docs; app-server itself manages Codex auth/network |
 | Local settings | `%LOCALAPPDATA%\AiQuotaMonitor\settings.json` | Schema 1, atomic replace, non-sensitive UI/interval/alert/startup prefs only |
 | Default refresh / timeout | 300 sec / 10 sec per provider; manual throttle 10 sec | MainViewModel and QuotaRefreshService; timeout/backoff tests pending Windows runner |
 | Release | tag `v0.1.0`, Windows x64 `PublishSingleFile`, portable ZIP + standalone EXE + SHA256 + SPDX SBOM + reports | `.github/workflows/release.yml`; not yet run |
 | Release state | Consult GitHub tag `v0.1.0` and release workflow | This task authorizes only the scoped prerelease after required gates |
-| Actions quota | UNKNOWN | No usage or quota claim is made; inspect actual workflow evidence before classifying any failure |
 | Windows 11 physical UAT | `HUMAN_TEST_PENDING` | `docs/UAT_WINDOWS11.md`; CI does not substitute |
 | Local environment | Linux; `dotnet` not installed; no Windows GUI/PowerShell 5.1 | Command lookup; no compile/test claim |
 | Current main protection snapshot | Branch payload `protected=false`, required checks `off`/empty; repo rulesets API returned `[]`; branch-protection endpoint returned 403 | Read-only GitHub API snapshot on 2026-10-21; the 403 is recorded separately, not used alone to infer policy |
-| Actions quota | UNKNOWN | No workflow has run for this branch yet |
+| Actions quota | UNKNOWN | No quota failure reported; do not infer remaining quota from successful runs |

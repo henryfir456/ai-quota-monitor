@@ -28,4 +28,21 @@ public sealed class CodexProcessEnvironmentTests
         Assert.DoesNotContain("HOME", filtered.Keys);
         Assert.DoesNotContain(filtered.Values, value => value.Contains("blocked-value", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void AllowlistReaderQueriesOnlyExplicitNames()
+    {
+        var readNames = new List<string>();
+
+        var environment = CodexProcessEnvironment.ReadAllowed(name =>
+        {
+            readNames.Add(name);
+            return name == "PATH" ? "C:/Windows/System32" : null;
+        });
+
+        string[] expectedNames = ["PATH", "SYSTEMROOT", "WINDIR", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA", "APPDATA", "TEMP", "TMP"];
+        Assert.Equal(expectedNames, readNames);
+        Assert.Equal("C:/Windows/System32", environment["PATH"]);
+        Assert.Single(environment);
+    }
 }

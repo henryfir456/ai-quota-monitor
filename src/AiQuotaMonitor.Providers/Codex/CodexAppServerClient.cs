@@ -22,11 +22,7 @@ public static class CodexAppServerClient
             StandardErrorEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
         };
         startInfo.ArgumentList.Add("app-server");
-        var inheritedEnvironment = Environment.GetEnvironmentVariables()
-            .Cast<System.Collections.DictionaryEntry>()
-            .Where(entry => entry.Key is string && entry.Value is string)
-            .Select(entry => new KeyValuePair<string, string?>((string)entry.Key, (string)entry.Value!));
-        var minimalEnvironment = CodexProcessEnvironment.Filter(inheritedEnvironment);
+        var minimalEnvironment = CodexProcessEnvironment.ReadCurrent();
         startInfo.Environment.Clear();
         foreach (var pair in minimalEnvironment)
         {
