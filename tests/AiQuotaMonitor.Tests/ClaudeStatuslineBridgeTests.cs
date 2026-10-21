@@ -45,7 +45,8 @@ public sealed class ClaudeStatuslineBridgeTests
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var hostTask = new ClaudeStatuslinePipeHost(provider).RunAsync(cancellation.Token);
         var result = await RunPowerShellAsync(["-File", helperPath],
-            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}");
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}",
+            enableTestTrace: true);
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("5h 76.5%", result.Output);
@@ -73,7 +74,8 @@ public sealed class ClaudeStatuslineBridgeTests
 
     private static async Task<(int ExitCode, string Output, string Error)> RunPowerShellAsync(
         IReadOnlyList<string> arguments,
-        string input)
+        string input,
+        bool enableTestTrace = false)
     {
         var powershellPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
@@ -110,6 +112,10 @@ public sealed class ClaudeStatuslineBridgeTests
         var powerShellHome = Path.GetDirectoryName(powershellPath)!;
         startInfo.Environment["PSHOME"] = powerShellHome;
         startInfo.Environment["PSModulePath"] = Path.Combine(powerShellHome, "Modules");
+        if (enableTestTrace)
+        {
+            startInfo.Environment["AI_QUOTA_MONITOR_TEST_TRACE"] = "1";
+        }
 
         using var process = new Process { StartInfo = startInfo };
         Assert.True(process.Start());
@@ -135,11 +141,14 @@ public sealed class ClaudeStatuslineBridgeTests
             await process.WaitForExitAsync();
             var output = await outputTask;
             var error = await errorTask;
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (!string.IsNullOrWhiteSpace(userProfile))
+            foreach (var name in new[] { "USERPROFILE", "USERNAME", "USERDOMAIN", "COMPUTERNAME" })
             {
-                output = output.Replace(userProfile, "<user-profile>", StringComparison.OrdinalIgnoreCase);
-                error = error.Replace(userProfile, "<user-profile>", StringComparison.OrdinalIgnoreCase);
+                var value = Environment.GetEnvironmentVariable(name);
+                if (!string.IsNullOrWhiteSpace(value) && value.Length >= 3)
+                {
+                    output = output.Replace(value, "<redacted>", StringComparison.OrdinalIgnoreCase);
+                    error = error.Replace(value, "<redacted>", StringComparison.OrdinalIgnoreCase);
+                }
             }
 
             throw new TimeoutException($"PowerShell helper timed out. stdout: {output}; stderr: {error}", exception);
