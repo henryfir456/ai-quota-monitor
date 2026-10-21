@@ -39,8 +39,9 @@ public sealed class ClaudeStatuslineBridgeTests
             return;
         }
 
-        const string command = "[Console]::Out.WriteLine('before-json'); Import-Module Microsoft.PowerShell.Utility; [Console]::Out.WriteLine('module-loaded'); $null = '{}' | ConvertFrom-Json; [Console]::Out.WriteLine('json-parsed')";
-        var result = await RunPowerShellAsync(["-Command", command], string.Empty);
+        const string command = "$raw = [Console]::In.ReadToEnd(); [Console]::Out.WriteLine('input-read'); Import-Module Microsoft.PowerShell.Utility; [Console]::Out.WriteLine('module-loaded'); $null = ConvertFrom-Json -InputObject $raw; [Console]::Out.WriteLine('json-parsed')";
+        const string input = "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":1800000000},\"seven_day\":{\"used_percentage\":41.2,\"resets_at\":1800600000}},\"session_id\":\"SYNTHETIC_SESSION_ONLY\",\"transcript_path\":\"SYNTHETIC_PATH_ONLY\"}";
+        var result = await RunPowerShellAsync(["-Command", command], input);
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("module-loaded", result.Output);

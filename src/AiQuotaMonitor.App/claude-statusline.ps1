@@ -40,7 +40,7 @@ try {
     }
 
     Write-TestTrace 'json-parse-start'
-    $inputData = $rawInput | ConvertFrom-Json -ErrorAction Stop
+    $inputData = ConvertFrom-Json -InputObject $rawInput -ErrorAction Stop
     Write-TestTrace 'json-parse-complete'
     $windows = @{}
     $display = @()
