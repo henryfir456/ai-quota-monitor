@@ -1,0 +1,138 @@
+<Window x:Class="AiQuotaMonitor.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AI 額度監控器"
+        Width="760"
+        Height="500"
+        MinWidth="600"
+        MinHeight="380"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource WindowForeground}"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing">
+    <Window.Resources>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Margin" Value="0,12,12,0" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentBackground}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentForeground}" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+        </Style>
+    </Window.Resources>
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Row="0" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="刷新" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanManualRefresh}" AutomationProperties.Name="立即刷新額度資料" />
+                    <Button Content="{Binding UsageButtonText}" Command="{Binding ToggleUsageCommand}" AutomationProperties.Name="切換已用或剩餘百分比" />
+                    <Button Content="{Binding CollapseButtonText}" Command="{Binding ToggleCollapseCommand}" AutomationProperties.Name="收合或展開供應商卡片" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+                    <Button Content="精簡面板" Command="{Binding OpenFloatingPanelCommand}" AutomationProperties.Name="顯示精簡浮動面板" />
+                    <Button Content="設定" Command="{Binding OpenSettingsCommand}" AutomationProperties.Name="開啟設定" />
+                    <Button Content="{Binding ThemeButtonText}" Command="{Binding ToggleThemeCommand}" AutomationProperties.Name="切換深色或淺色主題" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel>
+                <TextBlock Text="AI 額度監控器" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Text="Claude Code 與 Codex · Windows 11" Foreground="{DynamicResource SecondaryForeground}" Margin="0,4,0,0" />
+            </StackPanel>
+        </DockPanel>
+        <TextBlock Grid.Row="1"
+                   Text="{Binding StatusMessage}"
+                   Foreground="{DynamicResource SecondaryForeground}"
+                   TextWrapping="Wrap"
+                   Margin="0,14,0,0" />
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
+            <ItemsControl ItemsSource="{Binding Providers}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Text="{Binding StatusText}"
+                                               Foreground="{DynamicResource AccentBackground}"
+                                               VerticalAlignment="Center"
+                                               AutomationProperties.Name="供應商資料狀態" />
+                                    <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" />
+                                </DockPanel>
+                                <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.IsCollapsed, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <ItemsControl ItemsSource="{Binding Windows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{DynamicResource InsetBackground}" CornerRadius="10" Padding="12" Margin="0,4,0,7">
+                                                    <StackPanel>
+                                                        <DockPanel>
+                                                            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource SecondaryForeground}" />
+                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding PercentageText}" FontSize="20" FontWeight="SemiBold" />
+                                                        </DockPanel>
+                                                <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Foreground="{Binding ProgressBrush}" Height="8" Margin="0,8,0,5" AutomationProperties.Name="額度百分比">
+                                                    <ProgressBar.Style>
+                                                        <Style TargetType="ProgressBar">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding ProgressValue}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ProgressBar.Style>
+                                                </ProgressBar>
+                                                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource SecondaryForeground}" />
+                                                        <TextBlock Text="{Binding ResetText}" Foreground="{DynamicResource SecondaryForeground}" FontSize="11" Margin="0,4,0,0" />
+                                                        <TextBlock Text="{Binding CountdownText}" Foreground="{DynamicResource SecondaryForeground}" FontSize="11" />
+                                                        <TextBlock Text="{Binding LastUpdatedText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="{Binding SourceText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding LastUpdatedText}" Foreground="{DynamicResource MutedForeground}" FontSize="10" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+        <TextBlock Grid.Row="3"
+                   Text="數字只來自可驗證的來源；UNKNOWN、過期、失敗或未支援欄位不會補值。關閉視窗會縮至系統匣。"
+                   Foreground="{DynamicResource MutedForeground}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,12,0,0" />
+    </Grid>
+</Window>

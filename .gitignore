@@ -14,3 +14,8 @@ coverage/
 Thumbs.db
 .worktrees/
 .superpowers/
+**/bin/
+**/obj/
+artifacts/
+.vs/
+TestResults/

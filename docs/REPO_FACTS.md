@@ -1,22 +1,31 @@
 # REPO_FACTS｜可驗證的儲存庫事實
 
-更新日期：2026-10-20。此 Repo 是可複製範本，不代表新建 Repo 已完成產品或部署設定。
+更新日期：2026-10-21。未知能力明確標記；提交／CI／Release 結果以實際 GitHub evidence 更新。
 
 | 欄位 | 已驗證值 | 證據／限制 |
 | --- | --- | --- |
-| Repository | `henryfir456/agent-project-template` | 此工作分支的 GitHub remote 與 Repo metadata |
-| 預設分支 | `main` | GitHub Repo metadata（2026-10-20） |
-| 技術棧／工具鏈 | CommonJS Node.js scripts、JSON Schema、Markdown | `scripts/*.cjs`、`schemas/agent-loop-projects.schema.json`；無 dependency manifest |
-| Node 最低版本 | UNKNOWN | 沒有 `package.json.engines`；本次可用環境 Node v24.19.0 |
-| 安裝指令 | 不適用 | 範本未宣告 npm dependency |
-| 測試指令 | `node --test tests/*.test.cjs` | 本次環境可執行；變更後按受影響範圍及 Repo policy 執行 |
-| 設定驗證 | `node scripts/validate-agent-loop-config.cjs <config.json>` | `scripts/validate-agent-loop-config.cjs`；不要以只跑測試替代要驗證的實際設定 |
-| Skill audit | `node scripts/skill-audit.cjs` | `scripts/skill-audit.cjs`；只讀本地宣告內容，不證明雲端 Skill 已載入 |
-| 共用政策同步 | `node scripts/sync-shared-agent-policy.cjs <adl-root>` | 預設唯讀比對；只有經審閱後才加 `--write --replace-existing`，Repo identity 必須是 `agent-development-loop` |
-| Lint / Typecheck / Build | 未配置 | Repo 內無 package scripts、lint、typecheck 或 build workflow；不能宣稱通過 |
-| 版本來源檔案 | 未配置 | 範本本身沒有產品版本；使用範本建立產品後需由該 Repo 指定 |
-| 繁中 UI 更新紀錄來源 | 不適用於範本本身 | 新產品依其實際 UI／release files 設定 |
-| 主要程式路徑 | `scripts/`、`schemas/`、`tests/`、`.github/` | 規範與範例位於 `docs/`、`config/` |
-| CI workflows | 未配置於 main | Template main 目前沒有 `.github/workflows/`；Draft PR 不算已配置或已驗證的 CI |
-| 部署目標及命令 | UNKNOWN／未授權 | `docs/DEPLOYMENT.md` 明確未授權自動合併、正式部署及 migration |
-| 外部依賴及敏感資料邊界 | GitHub API／Agent 介面僅為範例政策 | 不在範本內配置 Token；不得把個資、Secret 或客戶資料寫入公開紀錄 |
+| Repository / default branch | `henryfir456/ai-quota-monitor` / `main` | Git remote、GitHub metadata；初始 SHA `7349aa0` |
+| 技術棧 | .NET 8、C#、WPF/MVVM、Windows Forms NotifyIcon | `AiQuotaMonitor.sln`、App csproj；需 Windows Desktop SDK |
+| 目標 | Windows 11 x64、asInvoker、self-contained portable | Issues #1/#7、app.manifest、release workflow；真機 UAT 未執行 |
+| SDK | 8.0.408 + same feature band latest patch | `global.json`；當前 Linux 無 dotnet，無本地 build 證據 |
+| Solution | `AiQuotaMonitor.sln` | repo root |
+| Restore | `dotnet restore AiQuotaMonitor.sln` | Windows workflow；NuGet audit NU1901–NU1904 作錯誤 |
+| Release build | `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | `.github/workflows/ci.yml`，待該 workflow run 證據 |
+| Unit test | `dotnet test AiQuotaMonitor.sln -c Release --no-build` | xUnit synthetic DTO/providers/settings/bridge tests；待 Windows runner |
+| Repository governance tests | `node --test tests/*.test.cjs` | Dedicated Ubuntu CI job; local sandbox child-process restrictions prevented a complete local run |
+| Windows PowerShell check | `tests/scripts/Test-ClaudeStatusline.ps1`，workflow `shell: powershell` | 解析所有 `.ps1` 並以 synthetic statusline stdin 執行 helper；待 Windows runner |
+| Secret scan | Gitleaks action SHA pinned | `.github/workflows/ci.yml`；待 Windows Actions |
+| Direct app NuGet dependencies | 無第三方 `PackageReference`；Core/Providers 是同 repo project reference | App `.csproj`；self-contained runtime components會出現在 Release SBOM |
+| Test dependencies | Microsoft.NET.Test.Sdk 17.12.0、xunit 2.9.3、xunit.runner.visualstudio 3.0.1 | Test csproj；fixed versions，NuGet audit on restore |
+| GitHub Action pins | checkout `11d596…`、setup-node `49933…`、setup-dotnet `67a357…`、upload-artifact `ea165…`、gitleaks `ff981…`、softprops `3bb127…` | `docs/DEPENDENCIES.md`；commit SHA pins |
+| Provider sources | Codex official app-server `account/rateLimits/read`; optional Claude official statusline local JSON | `docs/providers/codex-evidence.md`, `claude-evidence.md`; CLI versions UNKNOWN |
+| Token / data paths | No credential file access by Monitor; Codex child receives OS env allowlist; Claude sends two rate-limit windows over current-user pipe | Provider source, security/privacy docs; app-server itself manages Codex auth/network |
+| Local settings | `%LOCALAPPDATA%\AiQuotaMonitor\settings.json` | Schema 1, atomic replace, non-sensitive UI/interval/alert/startup prefs only |
+| Default refresh / timeout | 300 sec / 10 sec per provider; manual throttle 10 sec | MainViewModel and QuotaRefreshService; timeout/backoff tests pending Windows runner |
+| Release | tag `v0.1.0`, Windows x64 `PublishSingleFile`, portable ZIP + standalone EXE + SHA256 + SPDX SBOM + reports | `.github/workflows/release.yml`; not yet run |
+| Release state | Consult GitHub tag `v0.1.0` and release workflow | This task authorizes only the scoped prerelease after required gates |
+| Actions quota | UNKNOWN | No usage or quota claim is made; inspect actual workflow evidence before classifying any failure |
+| Windows 11 physical UAT | `HUMAN_TEST_PENDING` | `docs/UAT_WINDOWS11.md`; CI does not substitute |
+| Local environment | Linux; `dotnet` not installed; no Windows GUI/PowerShell 5.1 | Command lookup; no compile/test claim |
+| Current main protection snapshot | Branch payload `protected=false`, required checks `off`/empty; repo rulesets API returned `[]`; branch-protection endpoint returned 403 | Read-only GitHub API snapshot on 2026-10-21; the 403 is recorded separately, not used alone to infer policy |
+| Actions quota | UNKNOWN | No workflow has run for this branch yet |

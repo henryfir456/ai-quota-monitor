@@ -1,18 +1,21 @@
 # 更新紀錄
 
-遵循 Keep a Changelog 的精神；實際版號需與專案版本來源一致。
+遵循 Keep a Changelog 格式。Release tag、app version 與此文件版本保持一致。
 
 ## [Unreleased]
+
 ### 新增
-- 收斂根 `AGENTS.md` 為政策入口，將詳細規則放入 `docs/policies/`；新增 agents.md 官方格式與 Codex／Claude／Copilot surface 相容性審查，區分官方慣例、工具能力和 Repo 自訂政策。
-- 新增 Template canonical 共用 blocker policy 與唯讀預設同步腳本，明列八類阻塞的證據、重試、替代驗證、合併條件及輪替方式；補實 REPO_FACTS 並新增政策／adapter／同步腳本回歸測試。
-- 建立繁體中文 AI 開發範本的治理與文件骨架。
-- 加入版本化多 Repo Agent Loop 設定範例、JSON Schema 與離線 fail-closed 驗證器；三個初始 Repo 僅啟用安全掃描。
-- 重新驗證 Template 設定契約與 ADL runtime schema 完全一致；schema／policy/docs 測試 30/30 通過，仍未開啟任何寫入 capability。
-- Schema pattern 現在也拒絕 POSIX／Windows drive 和 root-relative 絕對路徑、parent traversal 與 NUL state path；新增契約回歸測試，Template 全套測試 31/31 通過。
-- 共用交付政策加入 Draft PR 的 same-head acceptance、privacy scan、retrospective 前審證據；ADL 只在證據齊全時輸出獨立 Ready 動作，下一輪重讀遠端狀態才可繼續。
+- 建立 .NET 8 WPF/MVVM、Core DTO、provider adapters、合成測試與 Windows CI。
+- Codex 官方 app-server 唯讀查詢與欄位證據文件。
+- Claude 官方 statusline JSON 可選本機 bridge；預設不修改 Claude 設定。
+- 繁體中文雙卡、來源狀態、刷新／收合／主題／浮動面板、系統匣、設定、低額度提醒與單一執行個體。
+- 加入安全／隱私／威脅模型、NuGet audit、Gitleaks、portable Release workflow 與 UAT checklist。
 
-### 修正
-- Skill Audit 拒絕透過外部符號連結讀取 Manifest／Baseline 或寫入報告；無法讀取的 Manifest／Skill 與錯誤 Baseline 結構回報 UNVERIFIED，Baseline 也會偵測已移除的 Skill，並增加對應回歸案例。
+### 安全
+- 沒有來源資料時使用 UNKNOWN／N/A；無效百分比或 reset 不推測。
+- 不讀取 Token 檔、不記錄 raw provider response／stderr，不登入、安裝 CLI、修復或執行 inference。
+- Codex app-server process 採環境變數 allowlist；Claude helper 只傳 rate limit 欄位。
 
-> 範本不代表任何應用已發布。建立新專案後依 `docs/REPO_FACTS.md` 配置版本／繁中 UI changelog 的同步檢查。
+## [0.1.0] - 2026-10-21
+
+Windows x64 prerelease 候選。包含 Codex 官方 app-server readonly provider、Claude Code 官方 statusline bridge（使用者選擇性配置）、繁體中文 WPF 卡片、系統匣、浮動面板、深／淺主題、使用者提醒設定及 self-contained portable 發行流程。Windows 11 實機 UAT 狀態仍為 `HUMAN_TEST_PENDING`。

@@ -1,0 +1,86 @@
+name: Windows portable prerelease
+
+on:
+  push:
+    tags:
+      - 'v0.*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-and-release:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Verify tag and application version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_NAME -ne 'v0.1.0') { throw 'Only the reviewed v0.1.0 tag may publish this prerelease.' }
+      - name: Restore
+        run: dotnet restore AiQuotaMonitor.sln
+      - name: Build Release
+        run: dotnet build AiQuotaMonitor.sln -c Release --no-restore
+      - name: Test Release
+        run: dotnet test AiQuotaMonitor.sln -c Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory tests/AiQuotaMonitor.Tests/TestResults
+      - name: PowerShell helper parser and synthetic input
+        shell: powershell
+        run: ./tests/scripts/Test-ClaudeStatusline.ps1
+      - name: List dependency audit
+        run: dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive
+      - name: Upload Windows test report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-release-test-report
+          path: tests/AiQuotaMonitor.Tests/TestResults/*.trx
+          if-no-files-found: ignore
+      - name: Publish self-contained single-file Windows x64 app
+        run: >-
+          dotnet publish src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:PublishTrimmed=false
+          -p:DebugType=None -p:DebugSymbols=false
+          -o artifacts/publish
+      - name: Prepare portable ZIP, SBOM, checksums, reports
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $dotnetVersion = dotnet --version
+          $dependencyReport = Join-Path $env:RUNNER_TEMP 'AiQuotaMonitor-dependencies.txt'
+          $appPackages = dotnet list src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj package --include-transitive
+          $testPackages = dotnet list tests/AiQuotaMonitor.Tests/AiQuotaMonitor.Tests.csproj package --include-transitive
+          @('PUBLISHED APP DEPENDENCIES', $appPackages, 'BUILD AND TEST DEPENDENCIES', $testPackages) | Set-Content -LiteralPath $dependencyReport -Encoding utf8
+          $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          ./tests/scripts/New-ReleaseArtifacts.ps1 `
+            -Version $version `
+            -Commit $env:GITHUB_SHA `
+            -DotnetVersion $dotnetVersion `
+            -PublishDirectory (Join-Path $PWD 'artifacts/publish') `
+            -TestResultsPath (Join-Path $PWD 'tests/AiQuotaMonitor.Tests/TestResults') `
+            -DependencyReportPath $dependencyReport `
+            -WorkflowRunUrl $workflowUrl `
+            -OutputDirectory (Join-Path $PWD 'artifacts/release')
+      - name: Create GitHub prerelease
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          name: AI Quota Monitor ${{ github.ref_name }} (Windows x64)
+          body_path: artifacts/release/RELEASE_NOTES.md
+          prerelease: true
+          draft: false
+          make_latest: false
+          fail_on_unmatched_files: true
+          files: artifacts/release/*
