@@ -35,7 +35,7 @@ Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <p
 | xUnit | Windows · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55 passed / 0 failed | run 39540874352; TRX artifact `windows-test-report` |
 | Claude PowerShell helper | Windows PowerShell 5.1 parser and synthetic input | PASS | `Test-ClaudeStatusline.ps1` step in run 39540874352 |
 | NuGet vulnerability audit | Windows · `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · all four projects reported no vulnerable packages | run 39540874352 `List dependency audit` step |
-| Windows x64 publish / release assets | `v0.1.1` release workflow | NOT RUN | awaits same-head PR gates, review, merge, then Windows smoke/hash workflow |
+| Windows x64 publish / release assets | `v0.1.1` release workflow | NOT RUN | awaits exact PR head checks, independent review, merge, then Windows smoke/hash workflow |
 | Windows 11 device UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 physical device was available |
 
 This run includes the isolated PowerShell JSON probe's terminating-error handling. The report records the tested source SHA; check PR #8 Checks for any later documentation-only head validation.
