@@ -1,22 +1,24 @@
 # 測試報告
 
-更新日期：2026-10-21。下列自動驗證適用於完整 SHA `2ff1fb7909079856cefa6ba7beee4848b09fe3bc`，PR workflow run [39540530891](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540530891)。該 Windows runner 是 GitHub `windows-latest`，不是 Windows 11 使用者裝置。
+更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 
 ## 自動驗證
 
 | 檢查 | 環境／命令 | 結果 | 證據 |
 | --- | --- | --- | --- |
-| Repository governance | Ubuntu · `node --test tests/*.test.cjs` | PASS | run 39540530891 `repository-governance` job |
-| Gitleaks | Ubuntu GitHub Actions，full history | PASS | run 39540530891 `repository-governance` job |
-| Restore | Windows · `dotnet restore AiQuotaMonitor.sln` | PASS | run 39540530891 `build-and-test` job |
-| Release build | Windows · `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS | run 39540530891 `build-and-test` job |
-| xUnit | Windows · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55 passed / 0 failed | run 39540530891; TRX artifact `windows-test-report` |
-| Claude PowerShell helper | Windows PowerShell 5.1 parser and synthetic input | PASS | `Test-ClaudeStatusline.ps1` step in run 39540530891 |
-| NuGet vulnerability audit | Windows · `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · all four projects reported no vulnerable packages | run 39540530891 `List dependency audit` step |
+| Repository governance | Ubuntu · `node --test tests/*.test.cjs` | PASS · 32/32 | run 39540874352 `repository-governance` job |
+| Gitleaks | Ubuntu GitHub Actions，full history | PASS | run 39540874352 `repository-governance` job |
+| Restore | Windows · `dotnet restore AiQuotaMonitor.sln` | PASS | run 39540874352 `build-and-test` job |
+| Release build | Windows · `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS | run 39540874352 `build-and-test` job |
+| xUnit | Windows · `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55 passed / 0 failed | run 39540874352; TRX artifact `windows-test-report` |
+| Claude PowerShell helper | Windows PowerShell 5.1 parser and synthetic input | PASS | `Test-ClaudeStatusline.ps1` step in run 39540874352 |
+| NuGet vulnerability audit | Windows · `dotnet list AiQuotaMonitor.sln package --vulnerable --include-transitive` | PASS · all four projects reported no vulnerable packages | run 39540874352 `List dependency audit` step |
 | Windows x64 publish / release assets | `v0.1.0` release workflow | NOT RUN | awaits reviewed PR merge and authorized prerelease tag |
 | Windows 11 device UAT | `docs/UAT_WINDOWS11.md` | HUMAN_TEST_PENDING | no Windows 11 physical device was available |
 
-The next PR head strengthens the isolated PowerShell JSON probe with terminating-error handling; its exact-head workflow remains pending. Do not treat this SHA as evidence for a later head.
+This run includes the isolated PowerShell JSON probe's terminating-error handling. The report records the tested source SHA; check PR #8 Checks for any later documentation-only head validation.
+
+The Release build completed with 0 errors and 3 analyzer warnings: two `WFAC010` warnings concerning the app manifest's high-DPI declarations and one `xUnit2010` assertion-style warning. High-DPI behavior still needs the Windows 11 display-scaling UAT in `docs/UAT_WINDOWS11.md`.
 
 ## Earlier issues repaired
 
