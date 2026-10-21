@@ -2,7 +2,7 @@
 
 Windows 11 x64 桌面程式，以繁體中文顯示 Claude Code 與 OpenAI Codex 可取得的 5 小時及每週額度。只顯示經來源資料證實的百分比與重置時間；缺少或不支援的欄位維持 `UNKNOWN`／`N/A`，不以假資料、本機 token 計數或歷史平均冒充訂閱額度。
 
-> v0.1.0 保留為原始 prerelease。v0.1.1 候選修正來源 SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9` 已在 GitHub Windows Server 2025 runner 完成 packaged EXE UI smoke、故障反向測試與 SHA-256 同一性驗證（[Actions run 39554220174](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39554220174)）。EXE SHA-256 為 `ccce850276056beaeecd0479ec28633bd741ca64b5faaebb615f94be7eeb425e`，portable ZIP 為 `a7805935bf50c108612c18ca8b4247610298a7336711c03833b53bf8b709a851`；尚未發布，仍須完成精確 PR head review、Squash Merge 與 merge 後 tag Release Gate。Windows runner 通過不代表 Windows 11 實機 UAT；請依 [UAT 清單](docs/UAT_WINDOWS11.md)確認。
+> v0.1.0 原 prerelease 會保留不變。請在 [GitHub Releases](https://github.com/henryfir456/ai-quota-monitor/releases) 取得目前版本；每個 Release 都附 Windows 測試報告與 SHA-256。Windows Runner 通過不等於 Windows 11 實機或真實供應商帳號驗證；請依 [UAT 清單](docs/UAT_WINDOWS11.md)確認。
 
 ## 功能
 
@@ -18,28 +18,17 @@ Windows 11 x64 桌面程式，以繁體中文顯示 Claude Code 與 OpenAI Codex
 
 ### Codex
 
-Monitor 直接啟動本機已安裝的 `codex.exe app-server`，使用官方 `initialize`／`initialized` 握手及 `account/rateLimits/read` 唯讀方法。映射依來源 `windowDurationMins`：300 分鐘為 5 小時、10080 分鐘為每週；只有有效 `usedPercent` 才計算 remaining。Codex app-server 是實驗性協定；找不到 CLI、帳號不可用、未知 schema 或不支援方法時顯示 UNKNOWN、N/A 或 UNSUPPORTED。
+Monitor 從 PATH、`CODEX_CLI_PATH`、常見 CLI 安裝位置、`CODEX_HOME`（或預設 `%USERPROFILE%\.codex`）下的 standalone/app-server 套件，或可列舉的 Codex Desktop Windows 套件位置尋找 `codex.exe`，再以 stdio 啟動 `codex.exe app-server`。WindowsApps 套件可能受 Windows ACL 限制；若系統拒絕啟動，卡片會顯示程式無法啟動，不會複製或修改安裝內容。初始化會宣告 `experimentalApi`，先用 `account/read` 的 `refreshToken=false` 確認登入狀態，再呼叫唯讀 `account/rateLimits/read`。映射依來源 `windowDurationMins`：300 分鐘為 5 小時、10080 分鐘為每週；只有有效 `usedPercent` 才計算剩餘額度。Codex app-server 是實驗性協定；找不到 CLI、未登入、帳號不可用、逾時、未知 schema 或不支援方法時，卡片會顯示狀態、來源、最近成功更新時間、安全錯誤代碼與繁中處理建議。
 
 程式不讀 `auth.json`，不取出 Token、不送登入／thread／turn／model／inference RPC。app-server 可能依 Codex 本身的登入狀態連線讀取額度；Monitor 不另行選擇或猜測網路 API。使用者須自行安裝並設定 Codex；Monitor 不會安裝、修復或登入 Codex。
 
-### Claude Code（可選手動設定）
+### Claude Code（使用者選擇啟用）
 
 Claude Code 官方 [statusline JSON](https://code.claude.com/docs/en/statusline) 在資料可得時包含 5 小時和 7 日 rate limit 欄位。Monitor 附有 `claude-statusline.ps1`，只接收使用者選擇的官方 statusline 輸入並把兩個額度視窗送到限本機目前使用者的 pipe。未設定 statusline、欄位缺席或資料逾 15 分鐘時顯示 UNKNOWN、N/A 或資料已過期；Monitor 不會啟動 Claude Code 來要求新資料。
 
-要啟用，先解壓 portable ZIP，然後依官方格式在 Claude Code 使用者設定 `~/.claude/settings.json` 手動加入 `statusLine` 區塊，並將範例路徑換成實際 helper 路徑：
+Monitor 啟動時不讀取 Claude 設定。若要啟用來源，在主視窗的 Claude 卡片按「檢查／設定 Claude 額度來源」並確認本機檢查；若沒有設定衝突並繼續，Monitor 會先備份完整 `~/.claude/settings.json`，再安裝隨附的本機 helper 並加入官方 `statusLine` command。檔案可能含私人設定，備份留在本機。若偵測到既有自訂 `statusLine`、設定格式錯誤或 helper 路徑已有其他內容，Monitor 會停止且不覆寫。相同按鈕可復原 Monitor 建立且未被修改的設定；復原會保留使用者後續加入的其他欄位，完整備份會保留在本機。
 
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "powershell -NoProfile -File C:/Tools/AiQuotaMonitor/claude-statusline.ps1"
-  }
-}
-```
-
-Monitor 不會讀取或改寫 Claude 設定。若已有自訂 statusline command，單獨指定 helper 會取代原顯示，請先自行整合原指令後再設定。
-
-Claude 首次 API 回覆前，statusline 的 rate limit 欄位可能缺席。此整合不呼叫未公開的 OAuth usage endpoint，不讀取 Claude credential files，不登入／refresh Token，也不執行推論。
+Claude 首次 API 回覆前，statusline 的 rate limit 欄位可能缺席，部分方案也可能不提供額度欄位；Monitor 不會以推測補值。卡片會區分未安裝、未設定、helper 遺失／被修改、等待更新逾時、欄位缺席、JSON 解析失敗與設定衝突。此整合不呼叫未公開的 OAuth usage endpoint，不讀取 Claude credential files，不登入／refresh Token，也不執行推論。
 
 ## 下載與執行
 
@@ -52,11 +41,11 @@ Release 附版本、來源 commit、依賴清單、SBOM、Windows 啟動測試�
 
 ## 安全與隱私
 
-- 不讀取、記錄或複製 OAuth Token，不讀取 Codex／Claude 憑證檔。
+- 不讀取、記錄或複製 OAuth Token，不開啟 Codex／Claude 憑證檔。Claude 設定只有在使用者確認本機檢查後才讀取；確認啟用時會保留其他欄位、先將完整原檔備份在同一設定資料夾，再寫入 statusLine。
 - 不自動登入、refresh Token、修復、安裝／更新 CLI、執行付費推論或傳送遙測。
 - Claude helper 只傳百分比與 reset epoch seconds；session ID、prompt ID、transcript path 和工作目錄不傳入 Monitor。
 - Codex 子程序只取得必要的 OS 路徑與使用者 profile 環境變數；stderr 與原始 RPC 錯誤不保存。
-- 本機只保存主題、刷新、浮動視窗和提醒偏好等非敏感設定。
+- 主題、刷新、浮動視窗和提醒偏好保存在 Monitor 設定檔；Claude 備份只在使用者選擇啟用 statusline 後建立，內容依原檔保留且不傳出本機。
 
 詳細說明見 [PRIVACY.md](PRIVACY.md)、[SECURITY.md](SECURITY.md) 與 [威脅模型](docs/THREAT_MODEL.md)。
 

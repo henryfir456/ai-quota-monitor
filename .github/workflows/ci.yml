@@ -109,7 +109,7 @@ jobs:
         id: package
         shell: pwsh
         env:
-          APP_VERSION: 0.1.1
+          APP_VERSION: 0.1.2
         run: |
           $dependencyReport = Join-Path $env:RUNNER_TEMP 'AiQuotaMonitor-dependencies.txt'
           $appPackages = dotnet list src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj package --include-transitive
@@ -127,7 +127,7 @@ jobs:
       - name: Smoke test exact package and verify negative control
         shell: pwsh
         env:
-          APP_VERSION: 0.1.1
+          APP_VERSION: 0.1.2
         run: |
           $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
           ./tests/scripts/Test-WindowsExecutableSmoke.ps1 `
@@ -139,7 +139,7 @@ jobs:
       - name: Verify package identity and finalize SHA-256 manifest
         shell: pwsh
         env:
-          APP_VERSION: 0.1.1
+          APP_VERSION: 0.1.2
           UNIT_TEST_SUMMARY: ${{ steps.test-summary.outputs.summary }}
         run: |
           $workflowUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"

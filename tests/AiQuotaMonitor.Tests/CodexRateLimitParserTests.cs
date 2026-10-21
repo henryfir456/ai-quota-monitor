@@ -86,6 +86,17 @@ public sealed class CodexRateLimitParserTests
     }
 
     [Fact]
+    public void EmptyLegacyBucketIsReportedAsMissingQuotaInsteadOfUnsupportedSchema()
+    {
+        const string json = """{"rateLimits":{}}""";
+
+        var snapshot = CodexRateLimitParser.ParseResponse(json, ObservedAt);
+
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("codex_limit_bucket_missing", window.ErrorCode));
+    }
+
+    [Fact]
     public void UnknownDurationIsUnsupportedInsteadOfAssumingPrimaryIsFiveHours()
     {
         const string json = """{"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":20,"windowDurationMins":1440}}}}""";
@@ -108,12 +119,12 @@ public sealed class CodexRateLimitParserTests
     }
 
     [Fact]
-    public void InvalidJsonReturnsSafeUnsupportedState()
+    public void InvalidJsonReturnsSafeParseFailureState()
     {
         var snapshot = CodexRateLimitParser.ParseResponse("not json", ObservedAt);
 
-        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Unsupported, window.Status));
-        Assert.All(snapshot.Windows, window => Assert.Equal("unsupported_response", window.ErrorCode));
+        Assert.All(snapshot.Windows, window => Assert.Equal(QuotaStatus.Error, window.Status));
+        Assert.All(snapshot.Windows, window => Assert.Equal("parse_failure", window.ErrorCode));
     }
 
     private static ProviderSnapshot ParseFixture(string name)

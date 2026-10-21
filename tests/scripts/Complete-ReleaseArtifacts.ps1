@@ -8,8 +8,8 @@
 )
 
 $ErrorActionPreference = 'Stop'
-if ($Version -ne '0.1.1' -or ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne ('v' + $Version))) {
-    throw 'Release finalization is restricted to v0.1.1.'
+if ($Version -ne '0.1.2' -or ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne ('v' + $Version))) {
+    throw 'Release finalization is restricted to v0.1.2.'
 }
 
 $output = (Resolve-Path -LiteralPath $OutputDirectory).Path

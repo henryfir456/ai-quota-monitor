@@ -43,7 +43,11 @@ public sealed class CodexQuotaProvider : IQuotaProvider
         }
         catch (CodexRpcException)
         {
-            return Empty(QuotaStatus.Unknown, "account_unavailable");
+            return Empty(QuotaStatus.Unknown, "codex_account_unavailable");
+        }
+        catch (CodexNotLoggedInException)
+        {
+            return Empty(QuotaStatus.Unknown, "codex_not_logged_in");
         }
         catch (FileNotFoundException)
         {
@@ -56,6 +60,18 @@ public sealed class CodexQuotaProvider : IQuotaProvider
         catch (TimeoutException)
         {
             return Empty(QuotaStatus.Error, "timeout");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return Empty(QuotaStatus.Error, "parse_failure");
+        }
+        catch (IOException)
+        {
+            return Empty(QuotaStatus.Error, "app_server_unreachable");
+        }
+        catch (System.Net.Http.HttpRequestException)
+        {
+            return Empty(QuotaStatus.Error, "network_unreachable");
         }
         catch
         {

@@ -2,19 +2,26 @@
 
 遵循 Keep a Changelog 格式。Release tag、app version 與此文件版本保持一致。
 
-## [Unreleased]
+## [0.1.2] - 2026-10-21
 
 ### 新增
-- 建立 .NET 8 WPF/MVVM、Core DTO、provider adapters、合成測試與 Windows CI。
-- Codex 官方 app-server 唯讀查詢與欄位證據文件。
-- Claude 官方 statusline JSON 可選本機 bridge；預設不修改 Claude 設定。
-- 繁體中文雙卡、來源狀態、刷新／收合／主題／浮動面板、系統匣、設定、低額度提醒與單一執行個體。
-- 加入安全／隱私／威脅模型、NuGet audit、Gitleaks、portable Release workflow 與 UAT checklist。
+- Claude 卡片提供 statusline 一鍵設定與復原；設定前檢查衝突、使用者確認後建立完整本機備份，復原只移除未變更的 Monitor 設定。
+- Claude、Codex 顯示資料來源、最近成功更新時間、繁中狀態、固定安全錯誤碼與處理建議。
+- Codex App Server 初始化宣告 `experimentalApi`，使用 `account/read` 的 `refreshToken=false` 區分未登入，再讀取 `account/rateLimits/read`。
+- Claude CLI 定位涵蓋官方 Windows native `%USERPROFILE%\.local\bin\claude.exe`、npm 與 PATH；Codex 定位涵蓋 PATH、`CODEX_CLI_PATH`、`CODEX_HOME` standalone/app-server、npm 原生 binary 及可列舉的 Windows Desktop 套件位置。
+
+### 修正
+- Claude helper 將 JSON 解析失敗以固定錯誤碼送入 CurrentUserOnly pipe，避免失敗被誤報為成功或單純欄位缺席。
+- 設定後未收到 statusline 的 15 分鐘等待會明確逾時；過期成功資料仍標示過期並保留最後成功時間。
+- 額度讀取失敗時不留舊百分比冒充最新資料，診斷更新會即時反映於主視窗與浮動面板。
 
 ### 安全
-- 沒有來源資料時使用 UNKNOWN／N/A；無效百分比或 reset 不推測。
-- 不讀取 Token 檔、不記錄 raw provider response／stderr，不登入、安裝 CLI、修復或執行 inference。
-- Codex app-server process 採環境變數 allowlist；Claude helper 只傳 rate limit 欄位。
+- 不讀取或記錄 OAuth Token、Codex/Claude 憑證檔，不登入、refresh、安裝／修復 CLI 或執行推論。
+- Codex `account/read` 只判斷 `account` 是否為 null，不保存或顯示帳號欄位；Claude helper 僅傳官方 rate-limit 欄位或固定錯誤碼。
+- 增加已登入／未登入、成功、未設定／未安裝、解析失敗、逾時與過期的合成協定測試；真實供應商帳號驗證需 Windows 11 UAT。
+
+### 發行
+- Windows x64 Release workflow 僅接受 main 上固定 `v0.1.2` 的 `workflow_dispatch`，依 build → package → smoke test → SHA-256 驗證 → Release 順序執行並沿用同一成品；中斷後只有來源 SHA 相同且尚無 Release 的既有 tag 可續跑。
 
 ## [0.1.1] - 2026-10-21
 

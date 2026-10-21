@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using AiQuotaMonitor.App.Services;
 using AiQuotaMonitor.App.ViewModels;
+using MessageBox = System.Windows.MessageBox;
 
 namespace AiQuotaMonitor.App;
 
@@ -16,6 +17,7 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private readonly SystemTrayService _trayService;
+    private readonly ClaudeStatuslineSetupService? _claudeStatuslineSetup;
     private readonly bool _startMinimized;
     private readonly bool _smokeTest;
     private readonly string? _smokeReadyFile;
@@ -28,11 +30,22 @@ public partial class MainWindow : Window
         _startMinimized = startMinimized;
         _smokeTest = smokeTest;
         _smokeReadyFile = smokeReadyFile;
-        _viewModel = new MainViewModel(smokeSettingsPath is null ? null : new SettingsStore(smokeSettingsPath));
+        var claudeSetupState = smokeTest
+            ? new ClaudeStatuslineSetupState("statusline_not_configured", "設定 Claude 額度來源", false, false)
+            : new ClaudeStatuslineSetupState("claude_settings_not_inspected", "檢查／設定 Claude 額度來源", false, false);
+        if (!smokeTest)
+        {
+            _claudeStatuslineSetup = new ClaudeStatuslineSetupService();
+        }
+        _viewModel = new MainViewModel(
+            smokeSettingsPath is null ? null : new SettingsStore(smokeSettingsPath),
+            claudeSetupState.ErrorCode,
+            claudeSetupState.ButtonText);
         DataContext = _viewModel;
         _viewModel.LowQuotaAlert += _trayServiceAlert;
         _viewModel.SettingsRequested += OpenSettings;
         _viewModel.FloatingPanelRequested += ToggleFloatingPanel;
+        _viewModel.ClaudeStatuslineManageRequested += ManageClaudeStatusline;
         _viewModel.MonitoringPauseChanged += MonitoringPauseChanged;
         _viewModel.ThemeChanged += App.ApplyTheme;
         App.ApplyTheme(_viewModel.Settings.Theme);
@@ -77,6 +90,7 @@ public partial class MainWindow : Window
         _viewModel.LowQuotaAlert -= _trayServiceAlert;
         _viewModel.SettingsRequested -= OpenSettings;
         _viewModel.FloatingPanelRequested -= ToggleFloatingPanel;
+        _viewModel.ClaudeStatuslineManageRequested -= ManageClaudeStatusline;
         _viewModel.MonitoringPauseChanged -= MonitoringPauseChanged;
         _viewModel.ThemeChanged -= App.ApplyTheme;
         _floatingPanel?.Close();
@@ -162,6 +176,53 @@ public partial class MainWindow : Window
         {
             _viewModel.ApplySettings(dialog.UpdatedSettings);
         }
+    }
+
+    private void ManageClaudeStatusline()
+    {
+        if (_claudeStatuslineSetup is null)
+        {
+            return;
+        }
+
+        var inspectionConsent = MessageBox.Show(
+            this,
+            "為檢查 Claude Code 的 statusLine，Monitor 需要在本機讀取 ~/.claude/settings.json。檔案可能含私人設定；內容不會顯示或傳送。若沒有設定衝突並繼續，Monitor 會先完整備份原檔，再加入本機 helper；自訂 statusLine、格式錯誤或權限問題會停止。Monitor 不會安裝 CLI、登入或觸發推論。要繼續檢查嗎？",
+            "檢查 Claude 額度來源",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+        if (inspectionConsent != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var state = _claudeStatuslineSetup.Inspect();
+        _viewModel.UpdateClaudeStatuslineState(state.ErrorCode, state.ButtonText);
+        ClaudeStatuslineSetupResult result;
+        if (state.CanRollback)
+        {
+            var answer = MessageBox.Show(
+                this,
+                "這會移除 Monitor 加入的 statusLine 設定。若 statusLine 已被你修改，復原會停止並保留目前內容；其他設定與本機備份會保留。要繼續嗎？",
+                "復原 Claude 額度來源",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            result = _claudeStatuslineSetup.Rollback();
+        }
+        else
+        {
+            result = _claudeStatuslineSetup.Configure();
+        }
+
+        var updatedState = _claudeStatuslineSetup.Inspect();
+        _viewModel.UpdateClaudeStatuslineState(updatedState.ErrorCode, updatedState.ButtonText);
+        MessageBox.Show(this, result.Message, "Claude 額度來源", MessageBoxButton.OK,
+            result.ResultCode is "configured" or "restored" ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
     private void ExitApplication()

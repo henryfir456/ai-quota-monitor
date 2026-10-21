@@ -11,8 +11,8 @@
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $expectedVersion = 'v' + $Version
-if ($Version -ne '0.1.1' -or ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $expectedVersion)) {
-    throw 'Only the reviewed v0.1.1 package may enter the Windows release gate.'
+if ($Version -ne '0.1.2' -or ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $expectedVersion)) {
+    throw 'Only the reviewed v0.1.2 package may enter the Windows release gate.'
 }
 
 $publish = (Resolve-Path -LiteralPath $PublishDirectory).Path
@@ -87,7 +87,7 @@ $archivePath = Join-Path $OutputDirectory ('AiQuotaMonitor-' + $Version + '-win-
 Compress-Archive -Path (Join-Path $stageDirectory '*') -DestinationPath $archivePath -CompressionLevel Optimal
 Remove-Item -LiteralPath $stageDirectory -Recurse -Force
 
-$releaseNotes = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs/RELEASE_NOTES_0.1.1.md') -Raw
+$releaseNotes = Get-Content -LiteralPath (Join-Path $repositoryRoot 'docs/RELEASE_NOTES_0.1.2.md') -Raw
 $releaseNotes += "`n`nVersion: $Version`nCommit: $Commit`nWorkflow run: $WorkflowRunUrl`n`nWindows 11 physical-device UAT: HUMAN_TEST_PENDING."
 Set-Content -LiteralPath (Join-Path $OutputDirectory 'RELEASE_NOTES.md') -Value $releaseNotes -Encoding utf8
 

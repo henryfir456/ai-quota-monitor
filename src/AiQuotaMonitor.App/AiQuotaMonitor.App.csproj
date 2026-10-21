@@ -8,10 +8,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>AiQuotaMonitor</AssemblyName>
     <RootNamespace>AiQuotaMonitor.App</RootNamespace>
-    <Version>0.1.1</Version>
-    <AssemblyVersion>0.1.1.0</AssemblyVersion>
-    <FileVersion>0.1.1.0</FileVersion>
-    <InformationalVersion>0.1.1</InformationalVersion>
+    <Version>0.1.2</Version>
+    <AssemblyVersion>0.1.2.0</AssemblyVersion>
+    <FileVersion>0.1.2.0</FileVersion>
+    <InformationalVersion>0.1.2</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AiQuotaMonitor.Core\AiQuotaMonitor.Core.csproj" />
@@ -19,5 +19,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="claude-statusline.ps1" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="claude-statusline.ps1" LogicalName="AiQuotaMonitor.App.claude-statusline.ps1" />
   </ItemGroup>
 </Project>

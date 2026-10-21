@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using AiQuotaMonitor.Core;
+using AiQuotaMonitor.App.Services;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
 
@@ -11,10 +12,15 @@ public sealed class QuotaWindowViewModel : INotifyPropertyChanged
     private static readonly TimeZoneInfo TaipeiTimeZone = FindTaipeiTimeZone();
     private QuotaObservation _observation;
     private bool _showUsedPercent;
+    private DateTimeOffset? _lastSuccessfulUpdateAtUtc;
 
     public QuotaWindowViewModel(QuotaObservation observation)
     {
         _observation = observation;
+        if (observation.Status == QuotaStatus.Fresh && observation.RemainingPercent is not null)
+        {
+            _lastSuccessfulUpdateAtUtc = observation.ObservedAtUtc;
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -57,15 +63,9 @@ public sealed class QuotaWindowViewModel : INotifyPropertyChanged
         ? remaining <= 10 ? MediaBrushes.IndianRed : remaining <= 20 ? MediaBrushes.DarkOrange : MediaBrushes.MediumSeaGreen
         : MediaBrushes.SlateGray;
 
-    public string StatusText => _observation.Status switch
-    {
-        QuotaStatus.Fresh => _observation.IsDemo ? "示意資料" : "資料最新",
-        QuotaStatus.Stale => "資料已過期",
-        QuotaStatus.Unknown => "UNKNOWN",
-        QuotaStatus.Unsupported => "N/A · 尚未支援",
-        QuotaStatus.Error => "資料查詢失敗",
-        _ => "UNKNOWN"
-    };
+    public string StatusText => ProviderDiagnosticFormatter.Describe(_observation).Status;
+
+    public string DiagnosticText => ProviderDiagnosticFormatter.Describe(_observation).DiagnosticText;
 
     public string ResetText => _observation.ResetAtUtc is DateTimeOffset reset
         ? $"重置：{TimeZoneInfo.ConvertTime(reset, TaipeiTimeZone):yyyy/MM/dd HH:mm} Asia/Taipei"
@@ -91,11 +91,20 @@ public sealed class QuotaWindowViewModel : INotifyPropertyChanged
         }
     }
 
-    public string LastUpdatedText => $"更新：{TimeZoneInfo.ConvertTime(_observation.ObservedAtUtc, TaipeiTimeZone):yyyy/MM/dd HH:mm:ss} Asia/Taipei";
+    public DateTimeOffset? LastSuccessfulUpdateAtUtc => _lastSuccessfulUpdateAtUtc;
+
+    public string LastSuccessfulUpdateText => _lastSuccessfulUpdateAtUtc is DateTimeOffset updated
+        ? $"最後成功：{TimeZoneInfo.ConvertTime(updated, TaipeiTimeZone):yyyy/MM/dd HH:mm:ss} Asia/Taipei"
+        : "最後成功：N/A";
 
     public void Update(QuotaObservation observation)
     {
         _observation = observation;
+        if (observation.Status == QuotaStatus.Fresh && observation.RemainingPercent is not null)
+        {
+            _lastSuccessfulUpdateAtUtc = observation.ObservedAtUtc;
+        }
+
         OnPropertyChanged(string.Empty);
     }
 

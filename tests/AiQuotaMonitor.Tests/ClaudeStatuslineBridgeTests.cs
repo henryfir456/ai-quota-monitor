@@ -84,6 +84,73 @@ public sealed class ClaudeStatuslineBridgeTests
         Assert.All(clearedSnapshot.Windows, window => Assert.Equal(QuotaStatus.Unknown, window.Status));
         Assert.All(clearedSnapshot.Windows, window => Assert.Null(window.RemainingPercent));
 
+        const string privateMalformedInput = "private malformed synthetic input";
+        var malformed = await RunPowerShellAsync(["-File", helperPath], privateMalformedInput);
+        Assert.Equal(0, malformed.ExitCode);
+        Assert.Contains("N/A", malformed.Output);
+        Assert.DoesNotContain(privateMalformedInput, malformed.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain(privateMalformedInput, malformed.Error, StringComparison.Ordinal);
+        var parseFailure = await provider.GetSnapshotAsync(CancellationToken.None);
+        Assert.All(parseFailure.Windows, window => Assert.Equal(QuotaStatus.Error, window.Status));
+        Assert.All(parseFailure.Windows, window => Assert.Equal("parse_failure", window.ErrorCode));
+        Assert.All(parseFailure.Windows, window => Assert.Null(window.RemainingPercent));
+
+        cancellation.Cancel();
+        await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public async Task HelperPreservesInvalidQuotaFieldShapesForSafeParserDiagnostics()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var helperPath = FindHelperPath();
+        var provider = new ClaudeStatuslineProvider();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var hostTask = new ClaudeStatuslinePipeHost(provider).RunAsync(cancellation.Token);
+
+        const string invalidPercent = "PRIVATE_SYNTHETIC_PERCENT";
+        var percentResult = await RunPowerShellAsync(["-File", helperPath],
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":\"" + invalidPercent + "\"},\"seven_day\":{\"used_percentage\":41.2}},\"session_id\":\"PRIVATE_SYNTHETIC_SESSION\"}");
+        Assert.Equal(0, percentResult.ExitCode);
+        Assert.DoesNotContain(invalidPercent, percentResult.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain(invalidPercent, percentResult.Error, StringComparison.Ordinal);
+        var percentSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        var fiveHourWithInvalidPercent = percentSnapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        Assert.Equal(QuotaStatus.Error, fiveHourWithInvalidPercent.Status);
+        Assert.Equal("invalid_used_percent", fiveHourWithInvalidPercent.ErrorCode);
+        Assert.Null(fiveHourWithInvalidPercent.RemainingPercent);
+        Assert.Equal(58.8d, percentSnapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
+
+        const string invalidReset = "PRIVATE_SYNTHETIC_RESET";
+        var resetResult = await RunPowerShellAsync(["-File", helperPath],
+            "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":23.5,\"resets_at\":\"" + invalidReset + "\"},\"seven_day\":{\"used_percentage\":41.2}},\"transcript_path\":\"PRIVATE_SYNTHETIC_PATH\"}");
+        Assert.Equal(0, resetResult.ExitCode);
+        Assert.DoesNotContain(invalidReset, resetResult.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain(invalidReset, resetResult.Error, StringComparison.Ordinal);
+        var resetSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        var fiveHourWithInvalidReset = resetSnapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        Assert.Equal(QuotaStatus.Fresh, fiveHourWithInvalidReset.Status);
+        Assert.Equal("invalid_reset_timestamp", fiveHourWithInvalidReset.ErrorCode);
+        Assert.Equal(76.5d, fiveHourWithInvalidReset.RemainingPercent);
+        Assert.Null(fiveHourWithInvalidReset.ResetAtUtc);
+        Assert.All(resetSnapshot.Windows, window => Assert.DoesNotContain("PRIVATE_SYNTHETIC", window.ErrorCode ?? string.Empty, StringComparison.Ordinal));
+
+        var nullWindowResult = await RunPowerShellAsync(["-File", helperPath],
+            "{\"rate_limits\":{\"five_hour\":null,\"seven_day\":{\"used_percentage\":41.2}},\"session_id\":\"PRIVATE_SYNTHETIC_SESSION\"}");
+        Assert.Equal(0, nullWindowResult.ExitCode);
+        Assert.DoesNotContain("PRIVATE_SYNTHETIC_SESSION", nullWindowResult.Output, StringComparison.Ordinal);
+        Assert.DoesNotContain("PRIVATE_SYNTHETIC_SESSION", nullWindowResult.Error, StringComparison.Ordinal);
+        var nullWindowSnapshot = await provider.GetSnapshotAsync(CancellationToken.None);
+        var unsupportedFiveHour = nullWindowSnapshot.Windows.Single(window => window.WindowId == WindowId.FiveHour);
+        Assert.Equal(QuotaStatus.Unsupported, unsupportedFiveHour.Status);
+        Assert.Equal("unsupported_statusline_data", unsupportedFiveHour.ErrorCode);
+        Assert.Null(unsupportedFiveHour.RemainingPercent);
+        Assert.Equal(58.8d, nullWindowSnapshot.Windows.Single(window => window.WindowId == WindowId.Weekly).RemainingPercent);
+
         cancellation.Cancel();
         await hostTask.WaitAsync(TimeSpan.FromSeconds(3));
     }

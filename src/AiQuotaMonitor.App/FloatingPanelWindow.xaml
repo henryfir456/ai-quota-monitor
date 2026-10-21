@@ -2,10 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="AI 額度 · 精簡面板"
-        Width="440"
-        Height="250"
-        MinWidth="360"
-        MinHeight="190"
+        Width="480"
+        Height="320"
+        MinWidth="400"
+        MinHeight="250"
         ResizeMode="CanResizeWithGrip"
         WindowStyle="ToolWindow"
         ShowInTaskbar="False"
@@ -49,6 +49,9 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                            <TextBlock Text="{Binding SourceText}" Foreground="{DynamicResource MutedForeground}" FontSize="9" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding LastSuccessfulUpdateText}" Foreground="{DynamicResource MutedForeground}" FontSize="9" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding DiagnosticText}" Foreground="{DynamicResource SecondaryForeground}" FontSize="9" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="54" Margin="0,3,0,0" />
                         </StackPanel>
                     </Border>
                 </DataTemplate>

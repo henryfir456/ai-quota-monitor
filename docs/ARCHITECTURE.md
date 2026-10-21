@@ -30,11 +30,11 @@ WPF ViewModel ◀── QuotaRefreshService ◀── ProviderSnapshot / QuotaOb
 
 ### Codex
 
-每次查詢以絕對 `codex.exe` 路徑啟動短生命週期 `app-server` 子程序，送 `initialize`、`initialized`、`account/rateLimits/read`，讀一個 response 後終止整個 process tree。依官方 `windowDurationMins` 映射 300／10080 分鐘。stdout 僅供 RPC parser；stderr 丟棄；子程序環境只傳 OS 路徑及使用者 profile。Monitor 不開啟 Codex credentials 檔，也不取出／保存 Token。
+每次查詢以絕對 `codex.exe` 路徑啟動短生命週期 `app-server` 子程序，送含 `capabilities.experimentalApi=true` 的 `initialize`、`initialized`、`account/read`（`refreshToken=false`）與 `account/rateLimits/read`，讀一個 quota response 後終止整個 process tree。`account/read` 只用於辨識帳號是否為 null，不保留帳號欄位。依官方 `windowDurationMins` 映射 300／10080 分鐘。stdout 僅供 RPC parser；stderr 丟棄；子程序環境只傳 OS 路徑及使用者 profile。Monitor 不開啟 Codex credentials 檔，也不取出／保存 Token。
 
 ### Claude Code
 
-官方 statusline 資料由 Claude Code 在本機以 JSON stdin 呼叫使用者設定的 command。Monitor 隨附 helper，但不讀寫 Claude 設定、不啟動 Claude CLI。helper 只傳 `five_hour`、`seven_day` rate limits 欄位；未配置時 UNKNOWN，最後一個最新 observation 超過 15 分鐘為 STALE。
+官方 statusline 資料由 Claude Code 在本機以 JSON stdin 呼叫使用者設定的 command。Monitor 啟動時不讀 `~/.claude/settings.json`；使用者在 Claude 卡片確認本機檢查後才辨識來源狀態。啟用時先建立 recovery journal 和完整檔案備份，再保留其他 JSON 欄位並以原子寫入加入隨附 helper；新建 settings 使用 no-overwrite move，既有的自訂 `statusLine` 會阻止寫入。helper 只傳合法的 `five_hour`、`seven_day` rate limits 欄位或固定安全錯誤碼，不轉送任意原始值；設定後 15 分鐘未收到資料會逾時，最後成功資料超過 15 分鐘則標為過期。
 
 ## 刷新與狀態
 
@@ -45,6 +45,6 @@ WPF ViewModel ◀── QuotaRefreshService ◀── ProviderSnapshot / QuotaOb
 
 ## 隱私、設定與發行
 
-程式不自建網路 endpoint、資料庫、遙測或更新服務。Codex app-server 依它自己的產品實作管理認證與網路呼叫；Claude statusline 是本機資料。設定僅存 UI/刷新/提醒/啟動偏好並採原子寫入，不存 Token、帳號識別或原始 provider 回覆。具體資料處理見 [PRIVACY.md](../PRIVACY.md) 和 [THREAT_MODEL.md](THREAT_MODEL.md)。
+程式不自建網路 endpoint、資料庫、遙測或更新服務。Codex app-server 依它自己的產品實作管理認證與網路呼叫；Claude statusline 是本機資料。Monitor 偏好設定不存 Token、帳號識別或原始 provider 回覆；Claude 設定檔備份只有使用者確認啟用 statusline 後才會建立，完整留在本機。具體資料處理見 [PRIVACY.md](../PRIVACY.md) 和 [THREAT_MODEL.md](THREAT_MODEL.md)。
 
 Windows CI 執行 restore/build/test、PowerShell 5.1 parser 與 synthetic bridge、NuGet vulnerability audit；Ubuntu job 執行 repository governance tests 和 full-history Gitleaks secret scan。tag workflow 產生 self-contained win-x64 EXE、portable ZIP、SBOM、依賴清單、SHA-256 和測試摘要。CI／Release 不等同 Windows 11 個人裝置 UAT。

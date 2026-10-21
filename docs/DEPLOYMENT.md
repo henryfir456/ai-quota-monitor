@@ -4,14 +4,14 @@
 
 - 交付：Windows 11 x64 WPF self-contained portable ZIP 與 standalone EXE。
 - 原版：GitHub `v0.1.0` prerelease，保留原 tag 與附件，不覆寫。
-- 修正版目標：GitHub `v0.1.1` prerelease；僅由 `.github/workflows/release.yml` 在 Windows packaged EXE startup gate 成功後建立。
+- 修正版目標：GitHub `v0.1.2` prerelease；`.github/workflows/release.yml` 只接受 `main` 上固定 `v0.1.2` 的 `workflow_dispatch`。所有 Windows packaged EXE、反向案例及 SHA-256 Gate 通過後，publisher 才建立指向已測 `github.sha` 的 tag 和 draft Release，逐一比對附件名稱、包含 `SHA256SUMS.txt` 在內的每個遠端下載 SHA-256，並在公開前重新解析 tag 與確認 Release tag 名稱，最後才公開 prerelease。因 manifest 無法包含自己的 hash，draft body 會綁定其 SHA-256。中斷時只可續用來源 SHA、manifest 指紋相同的 draft 與附件；不完整 `starter` 附件會在同一 draft 內刪除後重傳。不同 SHA、不同 manifest、發布前被移動的 tag、已公開 Release 或 UNKNOWN 狀態均 fail closed。
 - stable release、自動更新、安裝器、正式資料變更：不在本次範圍／未授權。
-- 簽章：v0.1.0／v0.1.1 unsigned；不宣稱發行者簽章或 Windows 11 實機 UAT。
+- 簽章：v0.1.0／v0.1.1／v0.1.2 unsigned；不宣稱發行者簽章、真實 Claude/Codex 帳號驗證或 Windows 11 實機 UAT。
 - 回滾：可在 GitHub 將 prerelease 設為 draft/delete（需維護者執行）；不寫入使用者 CLI 設定或資料。
 
 ## 本次明確授權
 
-使用者本次明確授權完成 Issue #9／PR #10、協調 Template PR #25，於所有適用 Gate 通過後對 PR #10 與 #25 執行手動 Squash Merge，並只在 Windows Release Gate 通過時建立 `v0.1.1` prerelease。此為一次性範圍，不開啟 Auto-merge，也不授權 stable release、使用者資料修改、Secrets 或 CLI 安裝／修復。
+使用者本次明確授權完成 Issue #11 對應修正、建立 PR、獨立 review，並於所有適用 Gate 通過後 Squash Merge 至 `main`；Windows Release Gate 通過後，透過固定 `workflow_dispatch` 發布 `v0.1.2` prerelease。此為一次性授權，不開啟 Auto-merge，也不授權 stable release、讀取 Token／credential files、安裝／修復 CLI、登入或執行付費推論。Claude `settings.json` 只在使用者於本機明確確認設定後才備份與修改。
 
 ## 必要自動 Gate
 
@@ -21,7 +21,7 @@
 - 同一 SHA 的獨立 reviewer、retrospective、PII_SCAN、README/PRIVACY/SECURITY 與 UAT pending 文件完成。
 - 即時查核 `main` Branch Protection、inherited Rulesets、Required Checks 和 GitHub 權限；Required Checks 的 NOT CONFIGURED 不是 PASS，但明確確認未設定時不額外阻塞。
 - Release workflow 嚴格依序 build → package → Windows smoke test → SHA-256 驗證 → Release。Smoke 必須啟動打包 EXE，檢查可見視窗／應用 UI、readiness JSON、程序穩定存活、Windows Application Event 1000／.NET Runtime Event 1026 與故障反向控制；同一 EXE 和 ZIP 沿用到 SHA 驗證及 Release，不可重新封裝。任何 FAIL／UNKNOWN／cancel／timeout／無證據都阻止後續 Release。
-- GitHub repo mergeability、權限、Required Checks 與所有 Gate 通過後手動 Squash Merge PR；只可將 v0.1.1 tag 指向已合併 main 的 SHA。v0.1.0 不修改、不覆寫。
+- GitHub repo mergeability、權限、Required Checks 與所有 Gate 通過後手動 Squash Merge PR。Release workflow 僅接受 `main` 上固定 `v0.1.2` 的 manual dispatch；跨 ref 共用固定 concurrency group。既有 tag 只有在解析後指向 `github.sha` 且尚無 Release 時才可供中斷後續跑；既有 Release、不同 SHA 或未知狀態均拒絕。v0.1.0 與 v0.1.1 成品不修改、不覆寫。
 
 ## 人工驗收時機
 
