@@ -2,7 +2,25 @@
 
 ## Issue #9 / PR #10 修正驗證狀態
 
-截至目前，`ProgressValue` XAML Binding regression predicate 已在修正前的 XAML 上重現 FAIL，相關 Binding 已改為 OneWay；**本次 PR head 的 Windows build、xUnit、最終 portable EXE smoke、故障反向案例和 hash 驗證尚未執行**。下方舊 PR run 不代表本次修正通過，也不授權建立 v0.1.1 Release。工作目錄沒有 .NET SDK／Windows GUI；必要的執行證據必須來自 GitHub `windows-latest`。
+PR head `9a3d6ddeeaacfc213d4523a1f502769397f0df09` 的 Windows Gate 已在 GitHub Actions run [39552400463](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39552400463) 通過。這是候選驗證，不是 Release；`v0.1.1` 對外發布仍等待獨立 review、Squash Merge、合併後的 tag Release workflow 與相同最終產物驗證。README／文件更新會觸發另一個 PR head run，最終仍以該 head 的 Checks 和 Release run 為準。
+
+### Issue #9 packaged EXE Gate 結果
+
+| 檢查 | 結果 | 證據 |
+| --- | --- | --- |
+| Windows restore / Release build | PASS | GitHub Windows Server 2025 runner；run 39552400463；Source SHA `9a3d6ddeeaacfc213d4523a1f502769397f0df09` |
+| XAML regression / xUnit | PASS · 56 passed / 0 failed / 0 skipped | 同一 Windows job；修正新增的唯讀 ProgressValue XAML regression test 已執行 |
+| PowerShell scripts parse、Claude synthetic helper、NuGet audit | PASS | 同一 Windows job；完整 PowerShell scripts parse，NuGet vulnerability audit 成功 |
+| 最終 portable ZIP 內 standalone EXE smoke | PASS | 最終 package 完成後啟動該 EXE；offline/no-account/no-token 模式跳過 provider/CLI 刷新 |
+| UI ready / 穩定存活 / clean close | PASS | 可見主視窗 `AI 額度監控器`、Claude/Codex 兩卡、四條 OneWay progress binding；外部視窗 handle/title 保持 5 秒，正常關閉 |
+| 異常與崩潰事件 | PASS · 0 個相符事件 | smoke exception marker 與 Windows Application Error 1000 / .NET Runtime 1026 檢查 |
+| 故意啟動失敗反向案例 | PASS | 注入 `System.Windows.Markup.XamlParseException`，程序非零退出且未寫 UI ready marker；相同 Gate 拒絕壞版 |
+| SHA-256 同一性 | PASS | EXE `62a14de36d35039057420af173e9c820b4ab2b2f1a7fcfe2fe6315603672d969`；portable ZIP `ac0a241c12427be43bebfa3f5ccbae3d60a1859f9c64d53e49d0e2be03947dd0`；zip 內 EXE 與被測獨立 EXE 相同 |
+| 候選證據 artifact | 已上傳 | Actions run artifact `windows-packaged-smoke-evidence`，ID `12323623137`，SHA-256 `f5c775adaa232ec846dca56b235e4fa1cf06c9064f2c22ecebf9597151cea95a`，保留至 2026-11-04 |
+| Gitleaks / Ubuntu governance | PASS | 同一 PR run；repository-governance job 成功 |
+| Release / Windows 11 實機 UAT | 尚未發布 / HUMAN_TEST_PENDING | Release 需合併後另跑 tag workflow；Server 2025 Runner 不等同 Windows 11 裝置 UAT |
+
+Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <packaged EXE> -PackagePath <portable ZIP> -VerifyNegativeControl`；整份 evidence 只包含 runner、source SHA、UI 結果、例外型別與檔案 hash，不含帳號、Token 或額度資料。
 
 更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 

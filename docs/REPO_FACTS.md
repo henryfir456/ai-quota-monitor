@@ -10,11 +10,11 @@
 | SDK | 8.0.408 + same feature band latest patch | `global.json`；當前 Linux 無 dotnet，無本地 build 證據 |
 | Solution | `AiQuotaMonitor.sln` | repo root |
 | Restore | `dotnet restore AiQuotaMonitor.sln` | Windows workflow；NuGet audit NU1901–NU1904 作錯誤 |
-| Release build | `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS in PR run `39540874352` on SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f` |
-| Unit test | `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 55/55 in PR run `39540874352` on SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`; synthetic DTO/provider/settings/bridge tests |
-| Repository governance tests | `node --test tests/*.test.cjs` | PASS · 32/32 in Ubuntu job of PR run `39540874352`; local sandbox child-process restrictions prevented a complete local run |
-| Windows PowerShell check | `tests/scripts/Test-ClaudeStatusline.ps1`，workflow `shell: powershell` | PASS in PR run `39540874352`; parses all `.ps1` and invokes helper with synthetic statusline input |
-| Secret scan | Gitleaks action SHA pinned; full history on Ubuntu | PASS in PR run `39540874352` |
+| Release build | `dotnet build AiQuotaMonitor.sln -c Release --no-restore` | PASS in Issue #9 PR run `39552400463` on SHA `9a3d6ddeeaacfc213d4523a1f502769397f0df09`; Windows Server 2025 hosted runner |
+| Unit test | `dotnet test AiQuotaMonitor.sln -c Release --no-build` | PASS · 56/56 in PR run `39552400463`; includes readonly ProgressValue XAML regression test |
+| Repository governance tests | `node --test tests/*.test.cjs` | PASS · 32/32 in Ubuntu job of PR run `39552400463`; local sandbox child-process restrictions prevented a complete local run |
+| Windows PowerShell check | `tests/scripts/Test-ClaudeStatusline.ps1` plus parser over every `.ps1` | PASS in PR run `39552400463`; synthetic statusline input only |
+| Secret scan | Gitleaks action SHA pinned; full history on Ubuntu | PASS · no leaks found in PR run `39552400463` |
 | Direct app NuGet dependencies | 無第三方 `PackageReference`；Core/Providers 是同 repo project reference | App `.csproj`；self-contained runtime components會出現在 Release SBOM |
 | Test dependencies | Microsoft.NET.Test.Sdk 17.12.0、xunit 2.9.3、xunit.runner.visualstudio 3.0.1 | Test csproj；fixed versions，NuGet audit on restore |
 | GitHub Action pins | checkout `11d596…`、setup-node `49933…`、setup-dotnet `67a357…`、upload-artifact `ea165…`、download-artifact `d3f86…`、gitleaks `ff981…`、softprops `3bb127…` | `docs/DEPENDENCIES.md`；commit SHA pins |
@@ -24,8 +24,8 @@
 | Default refresh / timeout | 300 sec / 10 sec per provider; manual throttle 10 sec | MainViewModel and QuotaRefreshService; timeout/backoff tests passed in 55/55 Windows xUnit suite |
 | Current app candidate version | `0.1.1` | `src/AiQuotaMonitor.App/AiQuotaMonitor.App.csproj`; not yet released |
 | Original Release | `v0.1.0` Windows x64 prerelease, standalone EXE + portable ZIP + SHA256 + SPDX SBOM + reports | Existing tag/assets remain unchanged; user confirmed startup issue is tracked by Issue #9 |
-| Startup regression | `ProgressBar.Value` targeted readonly `QuotaWindowViewModel.ProgressValue` with default TwoWay binding | `MainWindow.xaml`; PR #10 sets the progress bar and related DataTrigger bindings to OneWay; Windows regression test pending |
-| Windows startup Gate | Final packaged EXE smoke + intentional `XamlParseException` negative control + hash identity verification | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `tests/scripts/Test-WindowsExecutableSmoke.ps1`, `Complete-ReleaseArtifacts.ps1`; new head NOT RUN yet |
+| Startup regression | `ProgressBar.Value` targeted readonly `QuotaWindowViewModel.ProgressValue` with default TwoWay binding | PR #10 sets ProgressBar and related DataTrigger bindings to OneWay; regression test PASS in Windows xUnit run `39552400463` |
+| Windows startup Gate | Final packaged EXE smoke + intentional `XamlParseException` negative control + hash identity verification | PASS on candidate SHA `9a3d6ddeeaacfc213d4523a1f502769397f0df09`; EXE `62a14de36d35039057420af173e9c820b4ab2b2f1a7fcfe2fe6315603672d969`, ZIP `ac0a241c12427be43bebfa3f5ccbae3d60a1859f9c64d53e49d0e2be03947dd0`; artifact ID `12323623137`, run `39552400463` |
 | Target Release | `v0.1.1`, Windows x64 portable ZIP + standalone EXE + SHA256 + SPDX SBOM + report/evidence | `.github/workflows/release.yml`; only after packaged Windows smoke and verification pass |
 | Release authorization | Current user explicitly authorized PR #10/#25 squash merge after gates and `v0.1.1` prerelease if all executable gates pass | One-time authorization in current task; not standing authorization |
 | Windows 11 physical UAT | `HUMAN_TEST_PENDING` | `docs/UAT_WINDOWS11.md`; CI does not substitute |

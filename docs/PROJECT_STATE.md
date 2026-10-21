@@ -10,7 +10,8 @@
 - v0.1.0 已發布後，使用者在 Windows 11 確認程式啟動崩潰。Issue #9 已記錄唯讀 `QuotaWindowViewModel.ProgressValue` 指向 WPF `ProgressBar.Value` 的預設 TwoWay Binding 為根因；本修正明確將相關 XAML Binding 設為 OneWay。
 - PR #10 原先只有政策文字。本輪同 PR 補上 XAML regression、final-package GUI smoke、故意失敗反向案例、SHA256 成品同一性驗證與 fail-closed Release dependency。
 - template PR #25 原先也只有政策文字；本輪同時補上可執行 helper、模板 CI contract/self-test 和採用端責任說明。
-- 截至本文件更新時，尚未取得本次 Windows Actions 或獨立 review 證據；v0.1.1 為 `RELEASE_BLOCKED`，不得發布或宣稱已驗證。PR／workflow 即時狀態以 GitHub 為準。
+- PR head `9a3d6ddeeaacfc213d4523a1f502769397f0df09` 的 Windows `build-package-and-smoke` 與 Ubuntu governance 已在 [Actions run 39552400463](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39552400463) PASS：56/56 xUnit、最終 packaged EXE UI smoke、五秒穩定存活、零個匹配 crash events、XamlParseException 負向案例、EXE/ZIP SHA-256 身分驗證與 Gitleaks 均成功。Artifact ID `12323623137` 保存 sanitized evidence 和候選成品。
+- v0.1.1 尚未發布：等待獨立 review、merge 與 merge 後 tag Release workflow 在完全相同上傳產物上完成 smoke/hash Gate；因此公開 Release 仍標記 `RELEASE_BLOCKED`。Windows Server 2025 Runner 不取代 Windows 11 實機 UAT。
 
 - Issue #1～#7 的程式、設定、README／PRIVACY／SECURITY 與 portable release pipeline 已實作；PR #8 已開啟並關聯全部 Issues。
 - PR run `39540874352` 在來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f` 通過 Windows restore/build、55/55 xUnit、PowerShell helper parser/synthetic input、NuGet vulnerability audit；Ubuntu governance 32/32 與 Gitleaks 同樣通過。

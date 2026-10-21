@@ -2,7 +2,7 @@
 
 Windows 11 x64 桌面程式，以繁體中文顯示 Claude Code 與 OpenAI Codex 可取得的 5 小時及每週額度。只顯示經來源資料證實的百分比與重置時間；缺少或不支援的欄位維持 `UNKNOWN`／`N/A`，不以假資料、本機 token 計數或歷史平均冒充訂閱額度。
 
-> v0.1.0 保留為原始 prerelease。v0.1.1 是 Issue #9 啟動修正候選版，只有 GitHub Windows Runner 的最終 EXE UI smoke、失敗反向測試與 SHA-256 同一性驗證全數通過後才會建立；目前狀態見 [Release](https://github.com/henryfir456/ai-quota-monitor/releases) 與 [目前狀態](docs/PROJECT_STATE.md)。Windows 11 實機 UAT 依 [UAT 清單](docs/UAT_WINDOWS11.md)逐項回報；Windows runner 通過不代表實機驗收。
+> v0.1.0 保留為原始 prerelease。v0.1.1 候選版已在 GitHub Windows Server 2025 runner 完成 packaged EXE UI smoke、故障反向測試與 SHA-256 同一性驗證（[Actions run 39552400463](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39552400463)）；尚未發布，仍須完成獨立 review、Squash Merge 與 merge 後 tag Release Gate。Windows runner 通過不代表 Windows 11 實機 UAT；請依 [UAT 清單](docs/UAT_WINDOWS11.md)確認。
 
 ## 功能
 
