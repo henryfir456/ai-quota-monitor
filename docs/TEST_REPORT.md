@@ -2,25 +2,25 @@
 
 ## Issue #9 / PR #10 修正驗證狀態
 
-修正程式來源 SHA `8aef7db2a25f637c8df8231b1f29fd540e9881f5` 的 Windows Gate 已在 GitHub Actions run [39553296900](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39553296900) 通過。較早候選 `9a3d6ddeeaacfc213d4523a1f502769397f0df09` 的 run 39552400463 已由此精確候選取代。這仍是候選驗證，不是 Release；`v0.1.1` 對外發布須等待精確 PR head 的文件變更 CI、獨立 review、Squash Merge、合併後 tag Release workflow 與同一最終產物驗證。此報告記錄 run 39553296900 實際驗證的程式碼來源 SHA；文件-only 後續提交由該 PR head Checks 另行驗證。
+修正程式來源 SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9` 的 Windows Gate 已在 GitHub Actions run [39554220174](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39554220174) 通過。較早候選 `8aef7db2a25f637c8df8231b1f29fd540e9881f5` 的 run 39553296900 已由此精確候選取代。這仍是候選驗證，不是 Release；`v0.1.1` 對外發布須等待精確 PR head 的文件變更 CI、獨立 review、Squash Merge、合併後 tag Release workflow 與同一最終產物驗證。此報告記錄 run 39554220174 實際驗證的程式碼來源 SHA；後續文件-only提交的 Actions 結果以 PR Checks 為準。
 
 ### Issue #9 packaged EXE Gate 結果
 
 | 檢查 | 結果 | 證據 |
 | --- | --- | --- |
-| Windows restore / Release build | PASS | GitHub Windows Server 2025 runner；run 39553296900；Source SHA `8aef7db2a25f637c8df8231b1f29fd540e9881f5` |
+| Windows restore / Release build | PASS | GitHub Windows Server 2025 runner；run 39554220174；Source SHA `61b64cef0f58ec16064e3213698e89e89a5b63d9` |
 | XAML regression / xUnit | PASS · 56 passed / 0 failed / 0 skipped | 同一 Windows job；唯讀 ProgressValue XAML regression test 已執行 |
 | PowerShell scripts parse、Claude synthetic helper、NuGet audit | PASS | 同一 Windows job；完整 PowerShell scripts parse，NuGet vulnerability audit 成功 |
 | 最終 portable ZIP 內 standalone EXE smoke | PASS | 最終 package 完成後啟動該 EXE；offline/no-account/no-token 模式跳過 provider/CLI 刷新 |
 | UI ready / 穩定存活 / clean close | PASS | 可見主視窗 `AI 額度監控器`、Claude/Codex 兩卡、四條 OneWay progress binding；外部視窗 handle/title 保持 5 秒，正常關閉 |
 | 異常與崩潰事件 | PASS · 0 個相符事件 | smoke exception marker 與 Windows Application Error 1000 / .NET Runtime 1026 檢查 |
 | 故意啟動失敗反向案例 | PASS | 注入 `System.Windows.Markup.XamlParseException`，程序非零退出且未寫 UI ready marker；相同 Gate 拒絕壞版 |
-| SHA-256 同一性 | PASS | EXE `fd03e4d6ee9357e67bc3248a98840b39eee058a2911efd0bd55e538d1021282b`；portable ZIP `c72e1a80fdc4ee0bd2100654eb75b316fb5ef48705548a37471c2918f1540ba9`；zip 內 EXE 與被測獨立 EXE 相同 |
-| 候選證據 artifact | 已上傳 | Actions run artifact `windows-packaged-smoke-evidence`，ID `12324592523`，artifact digest `sha256:8df9aaa4aa73a059dc82be8521050c2eecd183d43168663ff122c0e94103a56c`，保留至 2026-11-04 |
+| SHA-256 同一性 | PASS | EXE `ccce850276056beaeecd0479ec28633bd741ca64b5faaebb615f94be7eeb425e`；portable ZIP `a7805935bf50c108612c18ca8b4247610298a7336711c03833b53bf8b709a851`；zip 內 EXE 與被測獨立 EXE 相同 |
+| 候選證據 artifact | 已上傳 | Actions run artifact `windows-packaged-smoke-evidence`，ID `12324264835`，artifact digest `sha256:1598a434617bd7ca6efab40f1d6e37655fed518abe32f7392120ba83a12e074b`，保留至 2026-11-04 |
 | Gitleaks / Ubuntu governance | PASS | 同一 PR run；repository-governance job 成功 |
 | Release / Windows 11 實機 UAT | 尚未發布 / HUMAN_TEST_PENDING | Release 需合併後另跑 tag workflow；Server 2025 Runner 不等同 Windows 11 裝置 UAT |
 
-Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <packaged EXE> -PackagePath <portable ZIP> -VerifyNegativeControl`；run 39553296900 使用同一個 Windows build/package artifact 執行正向與負向 Gate、再核對 EXE/ZIP SHA。Evidence 只包含 runner、source SHA、UI 結果、例外型別與檔案 hash，不含帳號、Token 或額度資料。
+Smoke command: `tests/scripts/Test-WindowsExecutableSmoke.ps1 -ExecutablePath <packaged EXE> -PackagePath <portable ZIP> -VerifyNegativeControl`；run 39554220174 使用同一個 Windows build/package artifact 執行正向與負向 Gate、再核對 EXE/ZIP SHA。Evidence 只包含 runner、source SHA、UI 結果、例外型別與檔案 hash，不含帳號、Token 或額度資料。
 
 更新日期：2026-10-21。下列自動驗證適用於完整來源 SHA `24e31940caa191214cc3896f5c0a6d0b2f686f0f`，PR workflow run [39540874352](https://github.com/henryfir456/ai-quota-monitor/actions/runs/39540874352)。Windows job 使用 GitHub Windows Server 2025 runner，不是 Windows 11 使用者裝置。
 
